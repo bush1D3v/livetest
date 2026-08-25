@@ -1,0 +1,32 @@
+{
+  "name": "livetest-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live Test Runner — execucao automatica de testes em tempo real, ao salvar arquivos",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/cli",
+    "packages/vscode-extension",
+    "packages/landing"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run typecheck",
+    "verify": "npm run typecheck && npm run test:coverage && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "name": "livetest-vscode",
+  "displayName": "Live Test Runner",
+  "description": "Painel visual do Live Test Runner: status por arquivo, motivo da execucao e log de cada teste, em tempo real.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "publisher": "livetest",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18.18.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "test",
+    "watch",
+    "vitest",
+    "jest",
+    "pytest"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "workspaceContains:**/livetest.config.json",
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "livetest",
+          "title": "Live Test Runner",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "livetest": [
+        {
+          "id": "livetest.files",
+          "name": "Arquivos",
+          "contextualTitle": "Live Test Runner"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "livetest.connect",
+        "title": "Live Test: Conectar ao daemon",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "livetest.startDaemon",
+        "title": "Live Test: Iniciar daemon",
+        "icon": "$(play)"
+      },
+      {
+        "command": "livetest.stopDaemon",
+        "title": "Live Test: Encerrar daemon",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "livetest.refresh",
+        "title": "Live Test: Atualizar",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "livetest.showLog",
+        "title": "Live Test: Abrir log de execucao",
+        "icon": "$(output)"
+      },
+      {
+        "command": "livetest.runFile",
+        "title": "Live Test: Rodar testes deste arquivo",
+        "icon": "$(play-circle)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "livetest.startDaemon",
+          "when": "view == livetest.files && !livetest.connected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "livetest.connect",
+          "when": "view == livetest.files && !livetest.connected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "livetest.refresh",
+          "when": "view == livetest.files && livetest.connected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "livetest.showLog",
+          "when": "view == livetest.files",
+          "group": "navigation@3"
+        },
+        {
+          "command": "livetest.stopDaemon",
+          "when": "view == livetest.files && livetest.connected",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "livetest.runFile",
+          "when": "view == livetest.files && viewItem == livetest.file",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Live Test Runner",
+      "properties": {
+        "livetest.discoveryFile": {
+          "type": "string",
+          "default": ".livetest/daemon.json",
+          "description": "Caminho, relativo a raiz do workspace, do arquivo de descoberta do daemon."
+        },
+        "livetest.startCommand": {
+          "type": "string",
+          "default": "npx livetest start",
+          "description": "Comando usado pelo botao \"Iniciar daemon\". A extensao nunca sobe o daemon sozinha."
+        },
+        "livetest.reconnectIntervalMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 500,
+          "description": "Intervalo entre tentativas de reconexao quando o daemon cai."
+        },
+        "livetest.revealFailures": {
+          "type": "boolean",
+          "default": true,
+          "description": "Marca as falhas no editor com sublinhado e mensagem."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:watch": "node scripts/build.mjs --watch"
+  },
+  "dependencies": {
+    "@livetest/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "^1.85.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "esbuild": "^0.24.2"
+  },
+  "files": [
+    "dist",
+    "resources",
+    "README.md"
+  ]
+}

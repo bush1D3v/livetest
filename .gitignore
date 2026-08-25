@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.livetest/
+*.tsbuildinfo
+.DS_Store
+*.vsix
+.vscode-test/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/

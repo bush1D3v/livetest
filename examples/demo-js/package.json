@@ -1,0 +1,7 @@
+{
+  "name": "livetest-demo-js",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Projeto de exemplo usado para demonstrar e validar o Live Test Runner."
+}

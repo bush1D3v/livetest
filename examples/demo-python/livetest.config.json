@@ -1,0 +1,14 @@
+{
+  "watch": ["app/**/*.py", "tests/**/*.py"],
+  "dependencyDepth": {
+    "default": "direct",
+    "overrides": { "app/login.py": "transitive" }
+  },
+  "runners": {
+    "python": {
+      "adapter": "pytest",
+      "match": ["**/*.py"]
+    }
+  },
+  "server": { "enabled": false }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://livetest.dev/livetest.config.schema.json",
+  "title": "Live Test Runner",
+  "description": "Configuracao do Live Test Runner (livetest.config.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "dependencyDepth": {
+      "description": "Quao fundo no grafo reverso a execucao se propaga.",
+      "oneOf": [
+        { "enum": ["self", "direct", "transitive"] },
+        { "type": "integer", "minimum": 0 }
+      ]
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "description": "Como montar o comando e interpretar a saida.",
+          "type": "string",
+          "examples": ["vitest", "jest", "pytest", "command"]
+        },
+        "match": {
+          "description": "Globs dos arquivos-fonte atendidos por este runner.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "command": { "description": "Executavel. Obrigatorio para adapter \"command\".", "type": "string" },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "env": { "type": "object", "additionalProperties": { "type": "string" } },
+        "timeoutMs": { "type": "number", "exclusiveMinimum": 0 },
+        "cwd": { "type": "string" },
+        "graph": { "type": "string", "examples": ["js-ts", "python"] },
+        "testPatterns": {
+          "description": "Templates de caminho do teste. Tokens: {dir} {relDir} {relDirTail} {name} {ext}.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "testMatch": { "type": "array", "items": { "type": "string" } },
+        "testExtensions": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "root": { "description": "Raiz do projeto. Default: diretorio do arquivo de configuracao.", "type": "string" },
+    "watch": { "description": "Globs observados.", "type": "array", "items": { "type": "string" } },
+    "ignore": { "description": "Globs ignorados, somados aos padroes e ao .gitignore.", "type": "array", "items": { "type": "string" } },
+    "useGitignore": { "description": "Ler o .gitignore da raiz. Negacoes nao sao suportadas.", "type": "boolean", "default": true },
+    "dependencyDepth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": { "$ref": "#/definitions/dependencyDepth", "default": "direct" },
+        "overrides": {
+          "description": "Glob -> profundidade. O ultimo glob que casar vence.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/dependencyDepth" }
+        }
+      }
+    },
+    "debounce": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["idle", "batch", "both"], "default": "both" },
+        "idleMs": { "type": "number", "minimum": 0, "default": 400 },
+        "maxBatchWindowMs": { "type": "number", "minimum": 0, "default": 3000 }
+      }
+    },
+    "runners": { "type": "object", "additionalProperties": { "$ref": "#/definitions/runner" } },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logFile": { "type": ["string", "null"], "default": ".livetest/run.log" },
+        "statusFile": { "type": ["string", "null"], "default": ".livetest/status.json" },
+        "stdout": { "type": "boolean", "default": true },
+        "format": { "enum": ["pretty", "ndjson"], "default": "pretty" },
+        "color": { "oneOf": [{ "type": "boolean" }, { "const": "auto" }], "default": "auto" },
+        "logTailLines": { "type": "integer", "minimum": 0, "default": 40 }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "host": { "type": "string", "default": "127.0.0.1" },
+        "port": { "description": "0 deixa o sistema operacional escolher.", "type": "integer", "minimum": 0, "maximum": 65535, "default": 0 },
+        "discoveryFile": { "type": "string", "default": ".livetest/daemon.json" }
+      }
+    },
+    "concurrency": { "type": "integer", "minimum": 1, "default": 2 },
+    "dryRun": { "type": "boolean", "default": false },
+    "pythonPath": { "type": "string" },
+    "logLevel": { "enum": ["debug", "info", "warn", "error", "silent"], "default": "info" }
+  }
+}

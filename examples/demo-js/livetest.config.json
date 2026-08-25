@@ -1,0 +1,17 @@
+{
+  "watch": ["src/**/*.ts"],
+  "dependencyDepth": {
+    "default": "direct",
+    "overrides": {
+      "src/login.ts": "transitive"
+    }
+  },
+  "runners": {
+    "js": {
+      "adapter": "vitest",
+      "match": ["src/**/*.ts"]
+    }
+  },
+  "output": { "stdout": true, "format": "pretty" },
+  "server": { "enabled": false }
+}

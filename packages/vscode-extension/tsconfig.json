@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node", "vscode"],
+    // O pacote e CommonJS (exigencia do VSCode), mas o fonte e ESM: quem faz a
+    // ponte e o esbuild em `scripts/build.mjs`. Por isso a resolucao aqui e a
+    // de bundler, e nao a do Node.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "scripts/**/*.mjs"]
+}
