@@ -201,6 +201,18 @@ abre um terminal com o comando — a ação continua sendo sua.
 | **Python** | módulo `ast` nativo, com fallback por regex | pytest |
 | **Qualquer outra** | adapter próprio ([docs/adapters.md](docs/adapters.md)) | adapter `command` (exit code) |
 
+## Landing page
+
+O site de apresentação vive em [packages/landing/](packages/landing/). É estático,
+construído com Vite e **sem nenhuma dependência em runtime** — a seção central roda a
+mesma busca em largura do core, para que o visitante troque a profundidade e veja o
+grafo reagir na hora.
+
+```bash
+npm run dev --workspace @livetest/landing              # servidor local
+npm run build:standalone --workspace @livetest/landing # HTML em arquivo único
+```
+
 ## Documentação
 
 - [Configuração completa](docs/configuration.md) — todos os campos, com exemplos
@@ -209,12 +221,15 @@ abre um terminal com o comando — a ação continua sendo sua.
 - [Guia para agentes de IA](docs/ai-agents.md) — como consumir a saída
 - [`@livetest/core`](packages/core/README.md) — API programática
 - [`@livetest/cli`](packages/cli/README.md) — referência da CLI
+- [`@livetest/landing`](packages/landing/README.md) — a página de apresentação
 
 ## Desenvolvimento
 
 ```bash
 npm install
-npm test              # 988 testes nos três pacotes
+npm run verify        # typecheck + cobertura + build, tudo de uma vez
+
+npm test              # 1167 testes nos quatro pacotes
 npm run test:coverage # 100% de cobertura, com limite obrigatório
 npm run typecheck     # TypeScript estrito
 npm run build

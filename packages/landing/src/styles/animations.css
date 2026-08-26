@@ -1,0 +1,165 @@
+/*
+ * Quadros-chave e revelacao por rolagem.
+ *
+ * Tudo aqui e desligado por `prefers-reduced-motion`: quem pediu menos
+ * movimento recebe a pagina inteira, estatica e completa — nunca escondida.
+ */
+
+@keyframes grid-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(56px, 56px, 0);
+  }
+}
+
+@keyframes aurora-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(14vw, 10vh, 0) scale(1.18);
+  }
+}
+
+@keyframes aurora-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(-12vw, -8vh, 0) scale(0.94);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes strike-in {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes node-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Revelacao: estado inicial e estado revelado. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+}
+
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Escalonamento suave dentro de grades. */
+.feature-grid [data-reveal]:nth-child(2),
+.problem-grid [data-reveal]:nth-child(2),
+.consumers [data-reveal]:nth-child(2) {
+  transition-delay: 0.09s;
+}
+
+.feature-grid [data-reveal]:nth-child(3) {
+  transition-delay: 0.18s;
+}
+
+.feature-grid [data-reveal]:nth-child(4) {
+  transition-delay: 0.27s;
+}
+
+.feature-grid [data-reveal]:nth-child(5) {
+  transition-delay: 0.36s;
+}
+
+.feature-grid [data-reveal]:nth-child(6) {
+  transition-delay: 0.45s;
+}
+
+.steps [data-reveal]:nth-child(2) {
+  transition-delay: 0.1s;
+}
+
+.steps [data-reveal]:nth-child(3) {
+  transition-delay: 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .backdrop__glow {
+    display: none;
+  }
+}

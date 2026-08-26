@@ -1,0 +1,12 @@
+/*
+ * Ponto de entrada dos estilos. A ordem importa: tokens, depois fundo, depois
+ * componentes, depois o layout das secoes, e por fim as animacoes — que
+ * precisam vir por ultimo para vencer as transicoes declaradas antes.
+ */
+
+@import './base.css';
+@import './backdrop.css';
+@import './scrollbar.css';
+@import './components.css';
+@import './sections.css';
+@import './animations.css';

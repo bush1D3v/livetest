@@ -37,6 +37,19 @@ Primeira versão. Implementa o MVP descrito em
 - Códigos de saída estáveis, documentados, adequados a CI.
 - `runCli` embutível, que devolve o código em vez de chamar `process.exit`.
 
+**Landing page (`@livetest/landing`)**
+
+- Site estático em Vite, sem dependências em runtime: ~26 kB de CSS e ~20 kB de JS.
+- Terminal animado na abertura, encenando um daemon real — inclusive a regressão que
+  só aparece nos importadores.
+- Seção central interativa: o visitante escolhe a profundidade e o grafo recalcula os
+  arquivos alcançados, as arestas percorridas e o motivo de cada teste, com a mesma
+  busca em largura do core.
+- Realce de sintaxe próprio, em ~120 linhas testadas, no lugar de uma biblioteca.
+- Barra de rolagem estilizada, na página e dentro dos blocos que rolam.
+- `prefers-reduced-motion` desliga todas as animações e entrega a página completa.
+- `npm run build:standalone` gera a página inteira em um único arquivo HTML.
+
 **Extensão do VSCode**
 
 - Árvore de arquivos com status, motivo da execução no tooltip e falhas como nós
@@ -63,9 +76,9 @@ A seção 9 do PRD deixou quatro questões em aberto. As respostas desta versão
 
 ### Qualidade
 
-Os três pacotes têm **100% de cobertura** de linhas, ramos, funções e instruções, com o
-limite verificado a cada execução de `npm run test:coverage` — a suíte falha se cair.
-São 988 testes: 762 no core, 144 na CLI e 82 na extensão.
+Os quatro pacotes têm **100% de cobertura** de linhas, ramos, funções e instruções, com
+o limite verificado a cada execução de `npm run test:coverage` — a suíte falha se cair.
+São 1167 testes: 762 no core, 144 na CLI, 82 na extensão e 179 na landing.
 
 Ficam de fora da medição apenas cinco arquivos de `src/types/` que contêm somente
 `interface` e `type`: o TypeScript os compila para um `export {}` vazio, sem nenhuma

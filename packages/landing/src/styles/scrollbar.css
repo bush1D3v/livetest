@@ -1,0 +1,96 @@
+/*
+ * Barra de rolagem.
+ *
+ * A barra padrão do sistema costuma ser a única coisa clara em uma página
+ * escura — ela denuncia que o tema parou na borda do conteúdo. Aqui ela vira
+ * parte do desenho: trilho invisível, polegar na cor da marca, e um estado de
+ * hover que responde como qualquer outro controle.
+ *
+ * As duas sintaxes convivem de propósito: `scrollbar-*` cobre Firefox e os
+ * navegadores novos; `::-webkit-scrollbar` cobre Chrome, Edge e Safari, que
+ * ainda ignoram a forma padronizada em vários pontos.
+ */
+
+:root {
+  --scroll-thumb: #2b3348;
+  --scroll-thumb-hover: #3d4a66;
+  --scroll-thumb-accent: rgba(34, 211, 238, 0.45);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  /* A borda transparente afina o polegar sem encolher a área de clique. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+  background-color: var(--scroll-thumb);
+  transition: background-color 0.2s var(--ease);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/*
+ * Rolagem interna — blocos de código e a tabela comparativa.
+ *
+ * Dentro de uma caixa pequena, a barra da página inteira fica grossa demais e
+ * rouba largura de leitura. Estas ficam mais finas e ganham o tom da marca,
+ * porque ali a barra é a única pista de que há mais conteúdo à direita.
+ */
+.code-block,
+.compare-wrap,
+.terminal__body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb-accent) transparent;
+}
+
+.code-block::-webkit-scrollbar,
+.compare-wrap::-webkit-scrollbar,
+.terminal__body::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.code-block::-webkit-scrollbar-thumb,
+.compare-wrap::-webkit-scrollbar-thumb,
+.terminal__body::-webkit-scrollbar-thumb {
+  border-width: 2px;
+  background-color: var(--scroll-thumb-accent);
+}
+
+.code-block::-webkit-scrollbar-thumb:hover,
+.compare-wrap::-webkit-scrollbar-thumb:hover,
+.terminal__body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent);
+}
+
+/* O comando de instalação rola sem mostrar barra: a pílula é estreita demais. */
+.install__cmd {
+  scrollbar-width: none;
+}
+
+.install__cmd::-webkit-scrollbar {
+  display: none;
+}

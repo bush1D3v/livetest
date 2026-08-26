@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Live Test Runner — os testes certos, no instante do save</title>
+    <meta
+      name="description"
+      content="Observa o projeto, resolve quais testes uma alteração afeta pelo grafo de dependências e roda só esse subconjunto — explicando por que cada teste rodou. Para humanos e para agentes de IA."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#07090f" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Live Test Runner" />
+    <meta
+      property="og:description"
+      content="Roda os testes certos no instante em que você salva o arquivo — e explica por que rodou."
+    />
+
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap"
+    />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+
+  <body>
+    <!-- Barra de progresso da leitura, no topo da janela. -->
+    <div class="scroll-progress" aria-hidden="true"><i data-scroll-progress></i></div>
+
+    <!-- Fundo animado: malha de pontos, brilho que segue o cursor e auroras. -->
+    <div class="backdrop" aria-hidden="true">
+      <div class="backdrop__grid"></div>
+      <div class="backdrop__aurora backdrop__aurora--one"></div>
+      <div class="backdrop__aurora backdrop__aurora--two"></div>
+      <div class="backdrop__glow" data-cursor-glow></div>
+    </div>
+
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="site-header" data-header>
+      <a class="brand" href="#topo" aria-label="Live Test Runner, início">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 6h6M7 6v12" />
+            <circle cx="17" cy="8" r="3" />
+            <path d="M17 11v4M13 18h8" />
+          </svg>
+        </span>
+        <span class="brand__name">livetest</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Seções">
+        <a href="#problema">O problema</a>
+        <a href="#grafo">Como funciona</a>
+        <a href="#ia">Para agentes</a>
+        <a href="#comparativo">Comparativo</a>
+        <a href="#comecar">Começar</a>
+      </nav>
+
+      <div class="site-header__actions">
+        <a class="btn btn--ghost btn--sm" href="#comecar">Documentação</a>
+        <a class="btn btn--primary btn--sm" href="#comecar">Instalar</a>
+      </div>
+    </header>
+
+    <main id="conteudo">
+      <section class="hero" id="topo">
+        <div class="hero__content" data-reveal>
+          <p class="eyebrow">
+            <span class="pulse" aria-hidden="true"></span>
+            devDependency · JS/TS e Python · zero configuração
+          </p>
+
+          <h1 class="hero__title">
+            Os testes certos,<br />
+            <span class="gradient-text">no instante do save</span>
+          </h1>
+
+          <p class="hero__subtitle">
+            O Live Test Runner observa o projeto, descobre pelo <strong>grafo de dependências</strong>
+            quais testes a sua alteração afeta — inclusive os de quem <em>importa</em> o arquivo — e
+            roda só esse subconjunto. Em segundos. E te diz <strong>por que</strong> cada teste rodou.
+          </p>
+
+          <div class="hero__actions">
+            <a class="btn btn--primary btn--lg" href="#comecar">
+              Começar em 30 segundos
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M4 10h11M11 5l5 5-5 5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+            <a class="btn btn--ghost btn--lg" href="#grafo">Ver a propagação</a>
+          </div>
+
+          <div class="install" data-copy-root>
+            <code class="install__cmd" data-copy-source>npm install --save-dev @livetest/cli</code>
+            <button class="install__btn" type="button" data-copy-button aria-label="Copiar comando">
+              <span data-copy-label>Copiar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero__terminal" data-reveal>
+          <div class="terminal" data-terminal-shell>
+            <div class="terminal__bar">
+              <span class="terminal__dot terminal__dot--red"></span>
+              <span class="terminal__dot terminal__dot--yellow"></span>
+              <span class="terminal__dot terminal__dot--green"></span>
+              <span class="terminal__title">livetest start</span>
+              <span class="terminal__badge" data-terminal-badge>observando</span>
+            </div>
+            <pre class="terminal__body"><code data-terminal-output></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--problem" id="problema">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">O problema</p>
+          <h2 class="section__title">Você só descobre que quebrou <span class="strike">depois</span></h2>
+          <p class="section__lead">
+            O ciclo real de quem escreve código — pessoa ou IA — é <em>editar, editar, editar,
+            e só então testar</em>. Isso cobra dois preços.
+          </p>
+        </div>
+
+        <div class="problem-grid">
+          <article class="problem-card" data-reveal>
+            <span class="problem-card__index" aria-hidden="true">01</span>
+            <h3>Detecção tardia</h3>
+            <p>
+              Quando o teste enfim roda, já existem várias mudanças acumuladas. Isolar qual delas
+              quebrou o quê vira arqueologia — e, com um agente de IA, ele já avançou meia dúzia de
+              passos em cima de uma suposição errada.
+            </p>
+            <div class="problem-card__viz problem-card__viz--late" aria-hidden="true">
+              <span class="edit">edit</span><span class="edit">edit</span><span class="edit">edit</span>
+              <span class="edit">edit</span><span class="edit">edit</span>
+              <span class="boom">testes ✗</span>
+            </div>
+          </article>
+
+          <article class="problem-card" data-reveal>
+            <span class="problem-card__index" aria-hidden="true">02</span>
+            <h3>Escopo subestimado</h3>
+            <p>
+              A ferramenta roda o teste do arquivo que mudou e para por aí. Mas
+              <code>login.ts</code> quebrou — e quem acusa são os testes de <code>header.ts</code>
+              e <code>footer.ts</code>, que ninguém rodou. A regressão passa.
+            </p>
+            <div class="problem-card__viz problem-card__viz--scope" aria-hidden="true">
+              <span class="chip chip--run">login.test</span>
+              <span class="chip chip--miss">header.test</span>
+              <span class="chip chip--miss">footer.test</span>
+              <span class="chip chip--miss">layout.test</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--graph" id="grafo">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">O diferencial</p>
+          <h2 class="section__title">Você decide <span class="gradient-text">até onde propaga</span></h2>
+          <p class="section__lead">
+            Escolha a profundidade e veja, agora, o que aconteceria ao salvar
+            <code>login.ts</code>. É a mesma busca em largura que roda no daemon.
+          </p>
+        </div>
+
+        <div class="graph-demo" data-reveal>
+          <div class="graph-demo__controls" role="tablist" aria-label="Profundidade de propagação">
+            <button class="depth-btn" type="button" role="tab" data-depth="self">
+              <span class="depth-btn__name">self</span>
+              <span class="depth-btn__hint">só o arquivo</span>
+            </button>
+            <button class="depth-btn" type="button" role="tab" data-depth="direct" aria-selected="true">
+              <span class="depth-btn__name">direct</span>
+              <span class="depth-btn__hint">+ importadores diretos</span>
+            </button>
+            <button class="depth-btn" type="button" role="tab" data-depth="transitive">
+              <span class="depth-btn__name">transitive</span>
+              <span class="depth-btn__hint">+ cadeia completa</span>
+            </button>
+          </div>
+
+          <div class="graph-demo__stage">
+            <svg class="graph-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <g data-graph-edges></g>
+            </svg>
+            <div class="graph-nodes" data-graph-nodes></div>
+          </div>
+
+          <div class="graph-demo__panel">
+            <div class="graph-demo__result">
+              <p class="graph-demo__caption" data-graph-caption></p>
+              <ul class="graph-demo__tests" data-graph-tests></ul>
+            </div>
+            <div class="graph-demo__config">
+              <p class="graph-demo__config-title">A regra que produz isso</p>
+              <pre class="code-block"><code data-code="jsonc" data-graph-config></code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--consumers" id="ia">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Dois consumidores, um só daemon</p>
+          <h2 class="section__title">Feito para a IA <span class="gradient-text">e</span> para você</h2>
+          <p class="section__lead">
+            Nenhuma ferramenta de watch foi desenhada para ser lida por um agente. Esta foi — sem
+            abrir mão do painel visual no editor.
+          </p>
+        </div>
+
+        <div class="consumers">
+          <article class="consumer consumer--ai" data-reveal>
+            <header class="consumer__head">
+              <span class="consumer__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="7" width="16" height="12" rx="3" />
+                  <path d="M12 3v4M9 12h.01M15 12h.01M9.5 16h5" />
+                </svg>
+              </span>
+              <div>
+                <h3>Para o agente de IA</h3>
+                <p>Três níveis de esforço, do mais barato ao mais completo.</p>
+              </div>
+            </header>
+
+            <ol class="consumer__list">
+              <li>
+                <strong>Uma linha grepável.</strong> Todo lote termina com campos
+                <code>chave=valor</code>. Um <code>grep</code> basta.
+                <pre class="code-block code-block--tight"><code data-code="output">LIVETEST batch=batch-7 status=failed files=3 tests=12 passed=10 failed=2 skipped=0 duration=1.4s</code></pre>
+              </li>
+              <li>
+                <strong>Um snapshot sempre atual.</strong> <code>.livetest/status.json</code> é
+                escrito de forma atômica — nunca se lê um JSON pela metade.
+              </li>
+              <li>
+                <strong>O histórico completo.</strong> <code>.livetest/run.log</code> em NDJSON, um
+                evento por linha, com o motivo de cada teste ter rodado.
+              </li>
+            </ol>
+
+            <p class="consumer__foot">
+              Prefere controlar quando testar? <code>livetest run</code> devolve
+              <strong>exit code 1</strong> quando falha — encadeia direto em <code>&amp;&amp;</code>.
+            </p>
+          </article>
+
+          <article class="consumer consumer--human" data-reveal>
+            <header class="consumer__head">
+              <span class="consumer__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="13" rx="2" />
+                  <path d="M8 21h8M12 17v4" />
+                </svg>
+              </span>
+              <div>
+                <h3>Para você, no VSCode</h3>
+                <p>Árvore de arquivos com o status e o motivo de cada execução.</p>
+              </div>
+            </header>
+
+            <div class="ide-mock" aria-hidden="true">
+              <div class="ide-mock__row ide-mock__row--dir">
+                <span class="ide-mock__caret">▾</span> src
+                <span class="ide-mock__meta ide-mock__meta--fail">1 com falha</span>
+              </div>
+              <div class="ide-mock__row"><span class="dot dot--pass"></span> login.test.ts <span class="ide-mock__meta">2/2</span></div>
+              <div class="ide-mock__row ide-mock__row--active">
+                <span class="dot dot--fail"></span> header.test.ts <span class="ide-mock__meta">0/1</span>
+              </div>
+              <div class="ide-mock__row ide-mock__row--child">
+                <span class="dot dot--fail"></span> header renderiza
+              </div>
+              <div class="ide-mock__row"><span class="dot dot--pass"></span> footer.test.ts <span class="ide-mock__meta">1/1</span></div>
+              <div class="ide-mock__row"><span class="dot dot--idle"></span> layout.test.ts</div>
+              <div class="ide-mock__tooltip">
+                <span class="ide-mock__tooltip-title">header.test.ts</span>
+                por que rodou: header.ts importa login.ts (1 nível)
+              </div>
+            </div>
+
+            <p class="consumer__foot">
+              A extensão <strong>não sobe o daemon sozinha</strong>: ela procura um em execução e,
+              se não achar, mostra o botão de iniciar. A ação continua sendo sua.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--features" id="recursos">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">O que vem na caixa</p>
+          <h2 class="section__title">Pequeno no caminho, <span class="gradient-text">completo no essencial</span></h2>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">◈</span>
+            <h3>Grafo de dependências de verdade</h3>
+            <p>
+              JS/TS pela API do compilador TypeScript — resolve <code>paths</code>,
+              <code>baseUrl</code>, <code>index.*</code> e o mapeamento <code>./x.js → ./x.ts</code>.
+              Python pelo módulo <code>ast</code> nativo, com imports relativos e absolutos.
+            </p>
+          </article>
+
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">⏱</span>
+            <h3>Debounce que não te trava</h3>
+            <p>
+              Agrupa saves consecutivos por inatividade <em>e</em> por janela máxima. Uma sequência
+              longa de edições nunca adia os testes para sempre — nem dispara a cada tecla.
+            </p>
+          </article>
+
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">⌁</span>
+            <h3>Transparência total</h3>
+            <p>
+              Toda seleção vem com a cadeia de importação que a justifica. Não entendeu por que algo
+              rodou? <code>livetest why src/login.ts</code> mostra o caminho inteiro.
+            </p>
+          </article>
+
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">⚑</span>
+            <h3>Degrada, não cai</h3>
+            <p>
+              Python sumiu? Cai para análise por regex e avisa. Adapter quebrou? O arquivo roda
+              isolado e o evento diz o que mudou. O daemon segue de pé.
+            </p>
+          </article>
+
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">⬡</span>
+            <h3>Adapters plugáveis</h3>
+            <p>
+              Go, Rust, Java: implemente <code>DependencyGraphAdapter</code> e
+              <code>TestRunnerAdapter</code>, ou use o adapter <code>command</code> e tenha watch,
+              debounce e mapeamento sem escrever uma linha.
+            </p>
+          </article>
+
+          <article class="feature" data-reveal>
+            <span class="feature__icon" aria-hidden="true">◱</span>
+            <h3>Independente de IDE</h3>
+            <p>
+              O core roda 100% no terminal. A extensão é só uma camada de visualização — o fluxo com
+              agente funciona com o editor fechado.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--compare" id="comparativo">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Comparativo</p>
+          <h2 class="section__title">Já existe coisa parecida. <span class="gradient-text">Não igual.</span></h2>
+        </div>
+
+        <div class="compare-wrap" data-reveal>
+          <table class="compare">
+            <caption class="visually-hidden">
+              Comparação entre o Live Test Runner e ferramentas semelhantes
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Capacidade</th>
+                <th scope="col" class="compare__us">livetest</th>
+                <th scope="col">jest/vitest --watch</th>
+                <th scope="col">Wallaby.js</th>
+                <th scope="col">pytest-watch</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Propaga pelo grafo de dependências</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Profundidade configurável por arquivo</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Saída desenhada para agente de IA</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Explica por que cada teste rodou</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--partial">parcial</span></td>
+                <td><span class="mark mark--no">não</span></td>
+              </tr>
+              <tr>
+                <th scope="row">JS/TS e Python no mesmo daemon</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--no">não</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Funciona sem o editor aberto</th>
+                <td class="compare__us"><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--yes">sim</span></td>
+                <td><span class="mark mark--no">não</span></td>
+                <td><span class="mark mark--yes">sim</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section section--config" id="configuracao">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Configuração</p>
+          <h2 class="section__title">Um arquivo. <span class="gradient-text">E ele é opcional.</span></h2>
+          <p class="section__lead">
+            Sem nenhuma configuração, o daemon já funciona em projetos JS/TS ou Python com layout
+            convencional. O arquivo existe para quando você quer controle fino.
+          </p>
+        </div>
+
+        <div class="config-showcase" data-reveal>
+          <div class="config-showcase__tabs" role="tablist" aria-label="Exemplos de configuração">
+            <button class="config-tab" type="button" role="tab" data-config-tab="js" aria-selected="true">
+              JavaScript / TypeScript
+            </button>
+            <button class="config-tab" type="button" role="tab" data-config-tab="python">
+              Python
+            </button>
+            <button class="config-tab" type="button" role="tab" data-config-tab="outra">
+              Outra linguagem
+            </button>
+          </div>
+          <pre class="code-block code-block--lg"><code data-code="jsonc" data-config-body></code></pre>
+        </div>
+      </section>
+
+      <section class="section section--start" id="comecar">
+        <div class="section__head" data-reveal>
+          <p class="eyebrow">Começar</p>
+          <h2 class="section__title">Três comandos e <span class="gradient-text">acabou</span></h2>
+        </div>
+
+        <ol class="steps">
+          <li class="step" data-reveal>
+            <span class="step__num" aria-hidden="true">1</span>
+            <div class="step__body">
+              <h3>Instale como devDependency</h3>
+              <pre class="code-block"><code data-code="bash">$ npm install --save-dev @livetest/cli</code></pre>
+            </div>
+          </li>
+          <li class="step" data-reveal>
+            <span class="step__num" aria-hidden="true">2</span>
+            <div class="step__body">
+              <h3>Confira o ambiente</h3>
+              <pre class="code-block"><code data-code="bash">$ npx livetest doctor</code></pre>
+              <p>
+                Verifica configuração, globs observados, cobertura de testes e se os binários dos
+                runners existem — antes de você perder tempo depurando silêncio.
+              </p>
+            </div>
+          </li>
+          <li class="step" data-reveal>
+            <span class="step__num" aria-hidden="true">3</span>
+            <div class="step__body">
+              <h3>Deixe rodando</h3>
+              <pre class="code-block"><code data-code="bash">$ npx livetest start</code></pre>
+              <p>
+                Para um agente de IA, jogue em background e leia a linha
+                <code>LIVETEST</code> ao fim de cada lote.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="cta" data-reveal>
+          <h2 class="cta__title">Pare de descobrir a quebra <span class="gradient-text">no final</span></h2>
+          <p class="cta__lead">
+            Node 18.18+. Para Python, um interpretador 3.8+ no <code>PATH</code>. Nada além disso.
+          </p>
+          <div class="cta__actions install" data-copy-root>
+            <code class="install__cmd" data-copy-source>npx livetest init &amp;&amp; npx livetest start</code>
+            <button class="install__btn" type="button" data-copy-button aria-label="Copiar comando">
+              <span data-copy-label>Copiar</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__brand">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 6h6M7 6v12" />
+            <circle cx="17" cy="8" r="3" />
+            <path d="M17 11v4M13 18h8" />
+          </svg>
+        </span>
+        <div>
+          <p class="site-footer__name">Live Test Runner</p>
+          <p class="site-footer__tag">Os testes certos, no instante do save.</p>
+        </div>
+      </div>
+
+      <nav class="site-footer__links" aria-label="Rodapé">
+        <div>
+          <h4>Produto</h4>
+          <a href="#grafo">Propagação</a>
+          <a href="#recursos">Recursos</a>
+          <a href="#comparativo">Comparativo</a>
+        </div>
+        <div>
+          <h4>Documentação</h4>
+          <a href="#configuracao">Configuração</a>
+          <a href="#ia">Guia para agentes</a>
+          <a href="#comecar">Começar</a>
+        </div>
+        <div>
+          <h4>Pacotes</h4>
+          <a href="#comecar">@livetest/core</a>
+          <a href="#comecar">@livetest/cli</a>
+          <a href="#ia">Extensão VSCode</a>
+        </div>
+      </nav>
+
+      <p class="site-footer__legal">MIT · feito para quem testa cedo</p>
+    </footer>
+  </body>
+</html>

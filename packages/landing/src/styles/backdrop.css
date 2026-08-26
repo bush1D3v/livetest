@@ -1,0 +1,93 @@
+/*
+ * Fundo animado.
+ *
+ * Tres camadas independentes, todas `pointer-events: none` e fora do fluxo:
+ * uma malha de pontos que da textura de "editor", duas auroras que respiram, e
+ * um brilho que segue o cursor. Nenhuma delas anima layout — so `transform` e
+ * `opacity` — para nao custar reflow enquanto o visitante rola.
+ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 700px at 78% -8%, rgba(167, 139, 250, 0.16), transparent 62%),
+    radial-gradient(1000px 620px at 8% 4%, rgba(34, 211, 238, 0.14), transparent 60%),
+    var(--bg);
+}
+
+.backdrop__grid {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 72%);
+  animation: grid-drift 34s linear infinite;
+}
+
+.backdrop__aurora {
+  position: absolute;
+  width: 46vw;
+  height: 46vw;
+  min-width: 380px;
+  min-height: 380px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.backdrop__aurora--one {
+  top: -14%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.4), transparent 68%);
+  animation: aurora-a 22s ease-in-out infinite alternate;
+}
+
+.backdrop__aurora--two {
+  bottom: -18%;
+  right: -10%;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.36), transparent 68%);
+  animation: aurora-b 27s ease-in-out infinite alternate;
+}
+
+/* Segue o cursor via variaveis atualizadas em `main.ts`. */
+.backdrop__glow {
+  position: absolute;
+  width: 620px;
+  height: 620px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.1), transparent 62%);
+  transform: translate3d(
+    calc(var(--cursor-x, 50vw) - 310px),
+    calc(var(--cursor-y, 40vh) - 310px),
+    0
+  );
+  transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+  opacity: var(--cursor-on, 0);
+  will-change: transform;
+}
+
+/* Barra de progresso de leitura. */
+.scroll-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 60;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.scroll-progress i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left;
+  background: var(--gradient);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.55);
+}

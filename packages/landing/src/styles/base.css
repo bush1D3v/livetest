@@ -1,0 +1,190 @@
+/*
+ * Fundacoes: tokens, reset e tipografia.
+ *
+ * A paleta e escura por escolha, nao por moda: a pagina imita a superficie onde
+ * a ferramenta vive — terminal e editor. Verde e vermelho ficam reservados ao
+ * significado que tem no produto (passou / falhou) e nunca aparecem como
+ * enfeite.
+ */
+
+:root {
+  /* Superficies, do mais fundo ao mais proximo. */
+  --bg: #07090f;
+  --bg-soft: #0b0e17;
+  --surface: #10141f;
+  --surface-2: #151a28;
+  --line: #1e2434;
+  --line-strong: #2a3145;
+
+  /* Texto. */
+  --text: #e8ecf5;
+  --text-muted: #949db4;
+  --text-faint: #67708a;
+
+  /* Acentos da marca. */
+  --accent: #22d3ee;
+  --accent-2: #a78bfa;
+  --accent-soft: rgba(34, 211, 238, 0.12);
+  --gradient: linear-gradient(115deg, #22d3ee 0%, #7dd3fc 35%, #a78bfa 100%);
+
+  /* Semantica de teste — o vocabulario do produto. */
+  --pass: #4ade80;
+  --fail: #fb7185;
+  --warn: #fbbf24;
+  --idle: #4b5468;
+
+  /* Tipografia. */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+
+  /* Ritmo. */
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-lg: 22px;
+  --gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --max: 1180px;
+
+  /* Movimento. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.5s;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* O header fixo nao pode cobrir o titulo da secao ancorada. */
+  scroll-padding-top: 6rem;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-variant-ligatures: none;
+}
+
+:is(p, li) > code {
+  padding: 0.1em 0.4em;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: #b7e6f5;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+svg {
+  display: block;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #04121a;
+  font-weight: 600;
+  transition: top 0.2s var(--ease);
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.gradient-text {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.strike {
+  position: relative;
+  color: var(--text-muted);
+}
+
+.strike::after {
+  content: '';
+  position: absolute;
+  inset: 52% -0.15em auto -0.15em;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--fail);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: strike-in 0.7s 0.4s var(--ease) forwards;
+}
