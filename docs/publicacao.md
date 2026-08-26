@@ -70,10 +70,17 @@ sem banco.
 1. Entre em [vercel.com](https://vercel.com) e faça login **com a conta do
    GitHub** — é o que permite o deploy automático a cada push.
 2. **Add New → Project** e escolha o repositório.
-3. Na tela de configuração:
-   - **Framework Preset**: `Other`
-   - **Root Directory**: deixe na raiz (`./`)
-   - Não mexa em Build Command nem em Output Directory.
+3. Na tela de configuração, **corrija dois campos que a Vercel preenche
+   errado**:
+
+   - **Root Directory**: ela detecta `packages/landing` sozinha. Clique em
+     *Edit* e volte para a raiz do repositório. A Vercel lê o `vercel.json` de
+     dentro do Root Directory — apontando para `packages/landing`, o arquivo da
+     raiz é ignorado e você perde o build command, o `cleanUrls`, os headers de
+     cache e os de segurança, além do `standalone.html`.
+   - **Application Preset**: ela detecta `Vite`. Troque para `Other`, porque
+     quem define o build é o `vercel.json`.
+   - Não preencha Build Command nem Output Directory.
 
    O [`vercel.json`](../vercel.json) na raiz já define tudo:
 

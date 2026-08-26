@@ -50,7 +50,7 @@
     "vitest": "^2.1.8"
   },
   "author": "Victor José Lopes Navarro",
-  "homepage": "https://github.com/bush1D3v/livetest/tree/main/packages/core#readme",
+  "homepage": "https://github.com/bush1D3v/livetest/tree/master/packages/core#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bush1D3v/livetest.git",

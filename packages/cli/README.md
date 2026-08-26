@@ -1,6 +1,6 @@
 # `@livetest/cli`
 
-Interface de linha de comando do [Live Test Runner](https://github.com/bush1D3v/livetest/blob/main/README.md).
+Interface de linha de comando do [Live Test Runner](https://github.com/bush1D3v/livetest/blob/master/README.md).
 
 ```bash
 npm install --save-dev @livetest/cli

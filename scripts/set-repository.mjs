@@ -11,9 +11,12 @@
  * o `vsce` produz `blob/HEAD/../../docs/x.md`, que nenhum navegador resolve.
  * Deixá-los já absolutos evita a reescrita e funciona nos dois lugares.
  *
- * Uso: `npm run set-repo -- https://github.com/usuario/repositorio`
+ * O branch dos links vem do git; passe um segundo argumento para fixar outro.
+ *
+ * Uso: `npm run set-repo -- https://github.com/usuario/repositorio [branch]`
  */
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,12 +24,33 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACOTES = ['core', 'cli', 'vscode-extension'];
 
-/** Branch usada nos links dos READMEs. */
-const BRANCH = 'main';
+/** Lê o branch atual do git, ou cai em `main` fora de um repositório. */
+function detectarBranch() {
+  try {
+    const saida = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd: RAIZ,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return saida === '' || saida === 'HEAD' ? 'main' : saida;
+  } catch {
+    return 'main';
+  }
+}
+
+/**
+ * Branch usada nos links do GitHub.
+ *
+ * Chutar `main` é o erro clássico: em um repositório cujo branch é `master`
+ * todos os links nascem apontando para o vazio, e ninguém percebe até alguém
+ * clicar. O segundo argumento permite fixar outro branch, para quem publica a
+ * partir de um que não é o atual.
+ */
+const BRANCH = process.argv[3] ?? detectarBranch();
 
 const entrada = process.argv[2];
 if (entrada === undefined) {
-  console.error('Uso: npm run set-repo -- https://github.com/usuario/repositorio');
+  console.error('Uso: npm run set-repo -- https://github.com/usuario/repositorio [branch]');
   process.exit(1);
 }
 
@@ -92,4 +116,5 @@ for (const pacote of PACOTES) {
   console.log(`packages/${pacote}  ->  ${url}${mexeuNoReadme ? '  (+ links do README)' : ''}`);
 }
 
-console.log('\nConfira com: npm run preflight');
+console.log(`\nBranch usada nos links: ${BRANCH}`);
+console.log('Confira com: npm run preflight');
