@@ -17,7 +17,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:standalone": "npm run build && node scripts/build-standalone.mjs"
+    "build:standalone": "npm run build && node scripts/build-standalone.mjs",
+    "build:icons": "node scripts/make-icons.mjs",
+    "build:og": "node scripts/make-og-image.mjs",
+    "build:assets": "npm run build:icons && npm run build:og"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

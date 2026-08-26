@@ -43,7 +43,7 @@ export function inlineAssets(html) {
     (_todo, src) => `<script type="module">\n${lerAtivo(src)}\n</script>`,
   );
 
-  // O favicon vira data URI para nao sobrar nenhum arquivo solto.
+  // O favicon SVG vira data URI para nao sobrar nenhum arquivo solto.
   saida = saida.replace(/<link[^>]*rel="icon"[^>]*href="([^"]+)"[^>]*>/g, (todo, href) => {
     try {
       const svg = lerAtivo(href);
@@ -54,7 +54,30 @@ export function inlineAssets(html) {
     }
   });
 
+  // Os demais ativos de icone e o manifesto sao removidos em vez de embutidos:
+  // um `.ico` ou um `.png` viraria um data URI enorme, e nenhum deles faz falta
+  // em um arquivo que existe para ser aberto solto.
+  saida = saida.replace(
+    /\s*<link[^>]*rel="(?:alternate icon|apple-touch-icon|manifest)"[^>]*>/g,
+    '',
+  );
+
   return saida;
+}
+
+/**
+ * Torna absolutas as URLs que so funcionam absolutas.
+ *
+ * `og:image` e `canonical` ja saem do Vite com a URL completa; nada a fazer.
+ * Este passo existe para o dia em que alguem trocar uma delas por relativa —
+ * a funcao documenta a exigencia, e o teste a segura.
+ *
+ * @param html - HTML ja com os ativos embutidos.
+ * @returns `true` se todas as URLs sociais estao absolutas.
+ */
+export function urlsSociaisSaoAbsolutas(html) {
+  const encontradas = [...html.matchAll(/(?:property|rel)="(?:og:image|canonical)"[^>]*/g)];
+  return encontradas.every((achado) => /(?:href|content)="https?:\/\//.test(achado[0]));
 }
 
 const entrada = path.join(DIST, 'index.html');
@@ -64,6 +87,12 @@ if (!fs.existsSync(entrada)) {
 }
 
 const resultado = inlineAssets(fs.readFileSync(entrada, 'utf8'));
+
+if (!urlsSociaisSaoAbsolutas(resultado)) {
+  console.error('og:image ou canonical ficaram relativos — as redes sociais os ignorariam.');
+  process.exit(1);
+}
+
 const destino = path.join(DIST, 'standalone.html');
 fs.writeFileSync(destino, resultado, 'utf8');
 

@@ -20,9 +20,11 @@
   },
   "files": [
     "dist",
+    "src",
     "assets",
     "livetest.config.schema.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18.18.0"
@@ -33,7 +35,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "chokidar": "^4.0.3",
@@ -45,5 +48,28 @@
     "@types/picomatch": "^3.0.1",
     "@vitest/coverage-v8": "^2.1.8",
     "vitest": "^2.1.8"
-  }
+  },
+  "author": "Victor José Lopes Navarro",
+  "homepage": "https://github.com/bush1D3v/livetest/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bush1D3v/livetest.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/bush1D3v/livetest/issues"
+  },
+  "keywords": [
+    "test",
+    "watch",
+    "test-runner",
+    "dependency-graph",
+    "incremental",
+    "vitest",
+    "jest",
+    "pytest",
+    "ai-agent",
+    "tdd"
+  ],
+  "sideEffects": false
 }

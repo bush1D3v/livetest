@@ -1,6 +1,6 @@
 # Live Test Runner — extensão do VSCode
 
-Painel visual do [Live Test Runner](../../README.md): árvore de arquivos monitorados,
+Painel visual do [Live Test Runner](https://github.com/bush1D3v/livetest/blob/main/README.md): árvore de arquivos monitorados,
 status de cada um, o motivo de ter rodado, e o log completo de cada execução.
 
 ## O que faz

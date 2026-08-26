@@ -21,7 +21,10 @@
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run typecheck",
-    "verify": "npm run typecheck && npm run test:coverage && npm run build"
+    "verify": "npm run typecheck && npm run test:coverage && npm run build",
+    "preflight": "node scripts/preflight-publish.mjs",
+    "release:npm": "npm run verify && npm run preflight && npm publish --workspace @livetest/core --access public && npm publish --workspace @livetest/cli --access public",
+    "set-repo": "node scripts/set-repository.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

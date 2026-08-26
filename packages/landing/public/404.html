@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Página não encontrada — Live Test Runner</title>
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#07090f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- As fontes são o único recurso externo, e degradam para a pilha do
+         sistema se não carregarem. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;700&display=swap"
+    />
+    <!--
+      Esta página fica em `public/` e vai para o build sem passar pelo Vite:
+      o CSS é embutido de propósito, porque um 404 que depende de um arquivo
+      que pode não existir é um 404 que quebra duas vezes.
+    -->
+    <style>
+      :root {
+        --tinta: #e8ecf6;
+        --tinta-fraca: #8a93ab;
+        --ciano: #22d3ee;
+        --violeta: #a78bfa;
+        --fundo: #07090f;
+        --mono: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+        --sans: "Inter", "Segoe UI", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px;
+        background: var(--fundo);
+        color: var(--tinta);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* As mesmas auroras da home, para o erro não parecer outro site. */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(560px circle at 18% 12%, rgba(34, 211, 238, 0.16), transparent 60%),
+          radial-gradient(620px circle at 82% 88%, rgba(167, 139, 250, 0.14), transparent 60%);
+      }
+
+      main {
+        position: relative;
+        max-width: 560px;
+        text-align: center;
+      }
+
+      .marca {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 40px;
+        text-decoration: none;
+        color: var(--tinta-fraca);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .marca svg {
+        width: 34px;
+        height: 34px;
+      }
+
+      .codigo {
+        font-family: var(--mono);
+        font-size: clamp(64px, 14vw, 104px);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        background: linear-gradient(100deg, var(--ciano), var(--violeta));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      h1 {
+        margin: 20px 0 0;
+        font-size: clamp(22px, 4vw, 28px);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: 14px 0 0;
+        color: var(--tinta-fraca);
+        line-height: 1.6;
+      }
+
+      .terminal {
+        margin: 32px 0 0;
+        padding: 14px 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 12px;
+        background: rgba(13, 17, 28, 0.7);
+        font-family: var(--mono);
+        font-size: 14px;
+        color: var(--tinta-fraca);
+        text-align: left;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .terminal b {
+        color: var(--ciano);
+        font-weight: 500;
+      }
+
+      .voltar {
+        display: inline-block;
+        margin-top: 32px;
+        padding: 13px 26px;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 211, 238, 0.28);
+        background: rgba(34, 211, 238, 0.08);
+        color: var(--tinta);
+        font-family: var(--mono);
+        font-size: 14px;
+        text-decoration: none;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .voltar:hover,
+      .voltar:focus-visible {
+        background: rgba(34, 211, 238, 0.16);
+        border-color: rgba(34, 211, 238, 0.55);
+        transform: translateY(-1px);
+      }
+
+      .voltar:focus-visible {
+        outline: 2px solid var(--ciano);
+        outline-offset: 3px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .voltar {
+          transition: none;
+        }
+        .voltar:hover {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <a class="marca" href="/">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#22d3ee" />
+              <stop offset="100%" stop-color="#a78bfa" />
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="#0a0d16" />
+          <g fill="none" stroke="url(#g)" stroke-width="2.2" stroke-linecap="round">
+            <path d="M7 9h8M11 9v14" />
+            <circle cx="22" cy="11" r="3.4" />
+            <path d="M22 14.4v4.2M17.5 23h9" />
+          </g>
+        </svg>
+        Live Test Runner
+      </a>
+
+      <div class="codigo">404</div>
+      <h1>Nenhum arquivo neste caminho</h1>
+      <p>
+        O grafo de dependências não conhece esta rota. Deve ser um link antigo — ou uma letra a
+        mais no endereço.
+      </p>
+
+      <div class="terminal"><b>livetest</b> resolve · 0 arquivos, 0 testes</div>
+
+      <a class="voltar" href="/">← voltar para a home</a>
+    </main>
+  </body>
+</html>

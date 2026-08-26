@@ -219,6 +219,7 @@ npm run build:standalone --workspace @livetest/landing # HTML em arquivo único
 - [Escrevendo um adapter](docs/adapters.md) — suporte a uma nova linguagem
 - [Protocolo de eventos](docs/protocol.md) — formato do socket e do NDJSON
 - [Guia para agentes de IA](docs/ai-agents.md) — como consumir a saída
+- [Publicação](docs/publicacao.md) — site na Vercel, pacotes no npm, extensão no VSCode
 - [`@livetest/core`](packages/core/README.md) — API programática
 - [`@livetest/cli`](packages/cli/README.md) — referência da CLI
 - [`@livetest/landing`](packages/landing/README.md) — a página de apresentação

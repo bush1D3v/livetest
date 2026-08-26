@@ -1,6 +1,6 @@
 # `@livetest/core`
 
-Motor do [Live Test Runner](../../README.md): watcher, debounce, grafo de dependências,
+Motor do [Live Test Runner](https://github.com/bush1D3v/livetest/blob/main/README.md): watcher, debounce, grafo de dependências,
 execução incremental de testes e os três canais de saída. Agnóstico de linguagem e
 independente de CLI e de editor.
 
@@ -97,7 +97,7 @@ createEngine({
 });
 ```
 
-Ver [docs/adapters.md](../../docs/adapters.md).
+Ver [docs/adapters.md](https://github.com/bush1D3v/livetest/blob/main/docs/adapters.md).
 
 ### `loadConfig(options): Promise<LoadConfigResult>`
 
@@ -159,7 +159,7 @@ if (discovery.status === 'running') {
 }
 ```
 
-Protocolo em [docs/protocol.md](../../docs/protocol.md).
+Protocolo em [docs/protocol.md](https://github.com/bush1D3v/livetest/blob/main/docs/protocol.md).
 
 ## Erros
 

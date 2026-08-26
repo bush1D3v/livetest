@@ -8,23 +8,68 @@
       name="description"
       content="Observa o projeto, resolve quais testes uma alteração afeta pelo grafo de dependências e roda só esse subconjunto — explicando por que cada teste rodou. Para humanos e para agentes de IA."
     />
+    <meta name="author" content="Victor José Lopes Navarro" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#07090f" />
+    <link rel="canonical" href="__SITE_URL__/" />
 
+    <!-- Open Graph: o cartão que aparece no WhatsApp, Slack, LinkedIn e Discord.
+         Estas URLs precisam ser absolutas — caminho relativo é ignorado. -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Live Test Runner" />
+    <meta property="og:site_name" content="Live Test Runner" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:title" content="Live Test Runner — os testes certos, no instante do save" />
     <meta
       property="og:description"
       content="Roda os testes certos no instante em que você salva o arquivo — e explica por que rodou."
     />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Live Test Runner: um terminal escuro mostrando três testes selecionados a partir de um arquivo salvo."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Live Test Runner — os testes certos, no instante do save" />
+    <meta
+      name="twitter:description"
+      content="Roda os testes certos no instante em que você salva o arquivo — e explica por que rodou."
+    />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
 
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="./favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap"
     />
+
+    <!-- Dados estruturados: é o que permite ao Google mostrar a ferramenta
+         como software, e não como uma página de texto qualquer. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Live Test Runner",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows, macOS, Linux",
+        "url": "__SITE_URL__/",
+        "image": "__SITE_URL__/og-image.png",
+        "description": "Observa o projeto, resolve quais testes uma alteração afeta pelo grafo de dependências e roda só esse subconjunto, explicando por que cada teste rodou.",
+        "author": { "@type": "Person", "name": "Victor José Lopes Navarro" },
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+
     <script type="module" src="/src/main.ts"></script>
   </head>
 

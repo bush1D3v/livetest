@@ -5,10 +5,13 @@ Vite, **sem uma única dependência em runtime** — o que você baixa é HTML, 
 bundle de ~20 kB.
 
 ```bash
-npm run dev      # servidor de desenvolvimento
-npm run build    # gera dist/
-npm run preview  # serve o dist/
-npm test         # 179 testes, 100% de cobertura
+npm run dev             # servidor de desenvolvimento
+npm run build           # gera dist/ (inclui robots.txt e sitemap.xml)
+npm run preview         # serve o dist/
+npm test                # 194 testes, 100% de cobertura
+
+npm run build:assets    # regenera ícones e cartão social (só quando a marca muda)
+npm run build:standalone # a página inteira em um arquivo só
 ```
 
 ## O argumento da página
@@ -49,6 +52,7 @@ src/
     clipboard     cópia com caminho alternativo
     tabs          estado de grupos de abas
   setup/        ligação com o DOM — uma função por comportamento
+  build/        código de build: URL do site, robots.txt e sitemap.xml
   styles/       tokens, fundo, barra de rolagem, componentes, seções, animações
   main.ts       fiação
 ```
@@ -70,6 +74,47 @@ clara em uma página escura.
 `prefers-reduced-motion: reduce` desliga **todas** elas e entrega a página inteira,
 estática e completa — nunca escondida. É o mesmo princípio da ferramenta: degradar,
 não sumir.
+
+## SEO, compartilhamento e instalação
+
+O que um link precisa para não parecer um rascunho quando alguém o cola em algum
+lugar:
+
+| Arquivo | Para quê |
+|---|---|
+| `og-image.png` | O cartão do WhatsApp, Slack, LinkedIn, Discord e Twitter |
+| `site.webmanifest` | Nome, cores e ícones ao "adicionar à tela de início" |
+| `icon-192/512.png` | Os tamanhos que o manifesto exige — PNG, não SVG |
+| `icon-maskable-512.png` | O Android recorta o ícone; sem esta variante, corta a marca |
+| `apple-touch-icon.png` | O iOS ignora SVG no atalho da tela de início |
+| `favicon.ico` | Navegadores antigos ainda pedem `/favicon.ico` na raiz |
+| `robots.txt` + `sitemap.xml` | Gerados no build, com a URL absoluta do deploy |
+| `404.html` | CSS embutido: um 404 que depende de outro arquivo quebra duas vezes |
+
+Os ícones e o cartão são **gerados**, não desenhados à mão: `scripts/make-icons.mjs`
+rasteriza o `favicon.svg` nos tamanhos necessários e `scripts/make-og-image.mjs`
+fotografa `scripts/social-card.html`. Os dois usam o Chrome ou o Edge já instalado na
+máquina, em vez de trazer `sharp` ou `puppeteer` para o projeto — os PNGs são
+versionados, então nada disso roda no deploy.
+
+O cartão social é HTML de verdade, e não um PNG opaco: dá para abrir
+`scripts/social-card.html` no navegador, ajustar, e rodar `npm run build:og`.
+
+### A URL absoluta
+
+Quase tudo na página usa caminho relativo, para que ela funcione aberta do disco ou em
+qualquer subdiretório. Três coisas não aceitam relativo — `og:image`, `canonical` e o
+`sitemap.xml` — e o endereço só existe depois do deploy. O plugin em `vite.config.ts`
+resolve isso em tempo de build, lendo, nesta ordem:
+
+1. `SITE_URL`, se você definir
+2. `VERCEL_PROJECT_PRODUCTION_URL`, que a Vercel preenche sozinha (inclusive com
+   domínio próprio)
+3. o padrão em `src/build/site-url.ts`
+
+```bash
+SITE_URL=https://livetest.dev npm run build
+```
 
 ## Por que não há biblioteca de animação nem de highlight
 

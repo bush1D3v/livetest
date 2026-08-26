@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cartão social — Live Test Runner</title>
+    <!--
+      Este arquivo é a fonte do `public/og-image.png`, a imagem que aparece
+      quando o link é colado no WhatsApp, Slack, LinkedIn ou Discord.
+
+      Ele é HTML de verdade, e não um PNG opaco, para poder ser aberto no
+      navegador e ajustado como qualquer página. Depois de mexer aqui, rode
+      `npm run build:og` para regravar o PNG.
+
+      Tamanho fixo de 1200x630 — a proporção que todas essas plataformas
+      recortam sem cortar nada.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;800&display=swap"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --tinta: #e8ecf6;
+        --tinta-fraca: #8a93ab;
+        --ciano: #22d3ee;
+        --violeta: #a78bfa;
+        --verde: #4ade80;
+        --fundo: #07090f;
+        --sans: "Inter", "Segoe UI", system-ui, sans-serif;
+        --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      }
+
+      body {
+        width: 1200px;
+        height: 630px;
+        background: var(--fundo);
+        color: var(--tinta);
+        font-family: var(--sans);
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Malha de pontos e auroras: o mesmo fundo da landing. */
+      .grade {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+        background-size: 26px 26px;
+        mask-image: radial-gradient(ellipse 90% 80% at 30% 40%, #000 40%, transparent 100%);
+      }
+
+      .aurora {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+      }
+
+      .aurora--ciano {
+        width: 620px;
+        height: 620px;
+        top: -280px;
+        left: -180px;
+        background: rgba(34, 211, 238, 0.22);
+      }
+
+      .aurora--violeta {
+        width: 680px;
+        height: 680px;
+        bottom: -360px;
+        right: -200px;
+        background: rgba(167, 139, 250, 0.2);
+      }
+
+      /* Fio de luz no topo, cortado nas pontas. */
+      .fio {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, var(--ciano), var(--violeta), transparent);
+      }
+
+      .palco {
+        position: relative;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 424px;
+        gap: 56px;
+        align-items: center;
+        /* O recuo embaixo abre espaco para o rodape sem descentralizar o resto. */
+        padding: 0 68px 92px;
+      }
+
+      /* ---- Rodape ---- */
+
+      .rodape {
+        position: absolute;
+        left: 68px;
+        right: 68px;
+        bottom: 40px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--mono);
+        font-size: 17px;
+      }
+
+      .comando {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 20px;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 211, 238, 0.22);
+        background: rgba(34, 211, 238, 0.06);
+      }
+
+      .comando b {
+        font-weight: 500;
+        color: var(--tinta);
+      }
+
+      .pilha {
+        display: flex;
+        gap: 22px;
+        color: var(--tinta-fraca);
+        font-size: 15.5px;
+        letter-spacing: 0.04em;
+      }
+
+      .marca {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 30px;
+      }
+
+      .marca svg {
+        width: 44px;
+        height: 44px;
+      }
+
+      .marca span {
+        font-family: var(--mono);
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--tinta-fraca);
+      }
+
+      h1 {
+        font-size: 54px;
+        line-height: 1.06;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      h1 em {
+        font-style: normal;
+        background: linear-gradient(100deg, var(--ciano), var(--violeta));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .sub {
+        margin-top: 24px;
+        font-size: 22px;
+        line-height: 1.5;
+        color: var(--tinta-fraca);
+        max-width: 34ch;
+      }
+
+      /* ---- Terminal ---- */
+
+      .terminal {
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(13, 17, 28, 0.92);
+        box-shadow:
+          0 40px 90px -30px rgba(0, 0, 0, 0.9),
+          0 0 0 1px rgba(34, 211, 238, 0.07);
+        overflow: hidden;
+      }
+
+      .terminal__barra {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 16px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .terminal__bolinha {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: rgba(148, 163, 184, 0.3);
+      }
+
+      .terminal__titulo {
+        margin-left: 8px;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--tinta-fraca);
+      }
+
+      .terminal__corpo {
+        padding: 22px 20px 20px;
+        font-family: var(--mono);
+        font-size: 15.5px;
+        line-height: 1.85;
+        white-space: nowrap;
+      }
+
+      .fraco {
+        color: var(--tinta-fraca);
+      }
+
+      .ciano {
+        color: var(--ciano);
+      }
+
+      .violeta {
+        color: var(--violeta);
+      }
+
+      .verde {
+        color: var(--verde);
+      }
+
+      .linha-teste {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .espaco {
+        height: 10px;
+      }
+
+      .rodape-terminal {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+        display: flex;
+        justify-content: space-between;
+        font-size: 14.5px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="grade"></div>
+    <div class="aurora aurora--ciano"></div>
+    <div class="aurora aurora--violeta"></div>
+    <div class="fio"></div>
+
+    <div class="palco">
+      <div>
+        <div class="marca">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#22d3ee" />
+                <stop offset="100%" stop-color="#a78bfa" />
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="8" fill="#0a0d16" />
+            <g fill="none" stroke="url(#g)" stroke-width="2.2" stroke-linecap="round">
+              <path d="M7 9h8M11 9v14" />
+              <circle cx="22" cy="11" r="3.4" />
+              <path d="M22 14.4v4.2M17.5 23h9" />
+            </g>
+          </svg>
+          <span>Live Test Runner</span>
+        </div>
+
+        <h1>Os testes certos,<br /><em>no instante do save.</em></h1>
+
+        <p class="sub">O grafo de dependências decide o que rodar. Você só salva o arquivo.</p>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal__barra">
+          <i class="terminal__bolinha"></i>
+          <i class="terminal__bolinha"></i>
+          <i class="terminal__bolinha"></i>
+          <span class="terminal__titulo">livetest</span>
+        </div>
+        <div class="terminal__corpo">
+          <div><span class="fraco">~</span> salvou <span class="ciano">src/login.ts</span></div>
+          <div class="fraco">&nbsp;&nbsp;3 testes afetados, 41 ignorados</div>
+          <div class="espaco"></div>
+          <div class="linha-teste">
+            <span><span class="verde">&#10003;</span> login.test.ts</span>
+            <span class="fraco">self</span>
+          </div>
+          <div class="linha-teste">
+            <span><span class="verde">&#10003;</span> header.test.ts</span>
+            <span class="fraco">direct</span>
+          </div>
+          <div class="linha-teste">
+            <span><span class="verde">&#10003;</span> layout.test.ts</span>
+            <span class="fraco">direct</span>
+          </div>
+          <div class="rodape-terminal">
+            <span class="verde">3 passaram</span>
+            <span class="violeta">1.6s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rodape">
+      <span class="comando">
+        <span class="ciano">$</span>
+        <b>npm i -D @livetest/cli</b>
+      </span>
+      <span class="pilha">
+        <span>Vitest</span>
+        <span>Jest</span>
+        <span>pytest</span>
+        <span class="violeta">MIT</span>
+      </span>
+    </div>
+  </body>
+</html>

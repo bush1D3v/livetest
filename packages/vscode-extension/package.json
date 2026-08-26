@@ -146,10 +146,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:watch": "node scripts/build.mjs --watch"
-  },
-  "dependencies": {
-    "@livetest/core": "0.1.0"
+    "build:watch": "node scripts/build.mjs --watch",
+    "package": "npm run build && vsce package --no-dependencies",
+    "publish:marketplace": "npm run build && vsce publish --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -157,11 +156,29 @@
     "@vitest/coverage-v8": "^2.1.8",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
-    "esbuild": "^0.24.2"
+    "esbuild": "^0.24.2",
+    "@livetest/core": "0.1.0",
+    "@vscode/vsce": "^3.2.1"
   },
   "files": [
     "dist",
     "resources",
-    "README.md"
-  ]
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "Victor José Lopes Navarro",
+  "homepage": "https://github.com/bush1D3v/livetest/tree/main/packages/vscode-extension#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bush1D3v/livetest.git",
+    "directory": "packages/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/bush1D3v/livetest/issues"
+  },
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#0a0d16",
+    "theme": "dark"
+  }
 }

@@ -18,7 +18,9 @@
   "files": [
     "bin",
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18.18.0"
@@ -29,7 +31,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "@livetest/core": "0.1.0"
@@ -39,5 +42,23 @@
     "@vitest/coverage-v8": "^2.1.8",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  }
+  },
+  "author": "Victor José Lopes Navarro",
+  "homepage": "https://github.com/bush1D3v/livetest/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bush1D3v/livetest.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/bush1D3v/livetest/issues"
+  },
+  "keywords": [
+    "test",
+    "watch",
+    "cli",
+    "test-runner",
+    "dependency-graph",
+    "ai-agent"
+  ]
 }

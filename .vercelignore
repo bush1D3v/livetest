@@ -1,0 +1,9 @@
+# A Vercel só precisa da landing e das dependências do workspace.
+packages/core/coverage
+packages/cli/coverage
+packages/vscode-extension/coverage
+packages/landing/coverage
+examples
+docs
+.peer-session-backup
+**/*.vsix
