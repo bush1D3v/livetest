@@ -337,8 +337,13 @@ surpresa. São três contas encadeadas: Microsoft → Azure DevOps → publisher
 
 ```bash
 cd packages/vscode-extension
-npm run package     # gera livetest-<versão>.vsix
+npm run package     # gera livetest-vscode-<versão>.vsix
 ```
+
+O identificador da extensão é `publisher` + `name` do manifesto — aqui,
+**`livetest.livetest-vscode`**. É ele que aparece na URL do Marketplace e nos
+comandos `code --install-extension` / `--uninstall-extension`. Não é o nome do
+arquivo `.vsix`, e não é só o publisher.
 
 O `.vsix` fica com cerca de 35 kB: o bundle do esbuild, o ícone e o README.
 O `--no-dependencies` no script é necessário porque o `@livetest/core` já está
@@ -348,10 +353,10 @@ inteiro.
 Instale o arquivo local e use a extensão de verdade antes de publicar:
 
 ```bash
-code --install-extension livetest-0.1.0.vsix
+code --install-extension livetest-vscode-0.1.0.vsix
 ```
 
-Para desinstalar: `code --uninstall-extension livetest.livetest`.
+Para desinstalar: `code --uninstall-extension livetest.livetest-vscode`.
 
 ### 3.3 Publicar
 
@@ -367,7 +372,7 @@ npx vsce publish --no-dependencies --pat $VSCE_PAT
 ```
 
 A extensão aparece na busca do Marketplace em alguns minutos. A página fica em
-`https://marketplace.visualstudio.com/items?itemName=livetest.livetest`.
+`https://marketplace.visualstudio.com/items?itemName=livetest.livetest-vscode`.
 
 ### 3.4 Versões seguintes
 
@@ -379,7 +384,7 @@ npx vsce publish minor
 ```
 
 Diferente do npm, o Marketplace deixa **despublicar** (`vsce unpublish
-livetest.livetest`) — mas isso apaga instalações, avaliações e contagem de
+livetest.livetest-vscode`) — mas isso apaga instalações, avaliações e contagem de
 downloads. Trate como igualmente definitivo.
 
 ### 3.5 Open VSX (opcional)
@@ -388,7 +393,7 @@ VSCodium, Cursor, Gitpod e Windsurf não acessam o Marketplace da Microsoft.
 Para alcançá-los, publique também no [Open VSX](https://open-vsx.org):
 
 ```bash
-npx ovsx publish livetest-0.1.0.vsix -p <token-do-open-vsx>
+npx ovsx publish livetest-vscode-0.1.0.vsix -p <token-do-open-vsx>
 ```
 
 ---
