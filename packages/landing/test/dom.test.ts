@@ -787,6 +787,53 @@ describe('index.html — estrutura', () => {
     expect(quebrados).toEqual([]);
   });
 
+  it('todo link externo abre em nova aba com rel seguro', () => {
+    // `target="_blank"` sem `rel="noopener"` da a pagina de destino acesso a
+    // `window.opener`. Nao ha razao para deixar passar em uma pagina nova.
+    const inseguros = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="http"]')]
+      .filter(
+        (link) =>
+          link.getAttribute('target') !== '_blank' ||
+          !(link.getAttribute('rel') ?? '').includes('noopener'),
+      )
+      .map((link) => link.getAttribute('href'));
+
+    expect(inseguros).toEqual([]);
+  });
+
+  it('cada pacote aponta para a propria pagina no npm', () => {
+    // O erro que este teste existe para pegar: um link escrito "@livetest/core"
+    // que leva a uma ancora da propria pagina. Continua sendo um link valido,
+    // entao nenhuma checagem de ancora quebrada o encontra.
+    for (const pacote of ['@livetest/core', '@livetest/cli']) {
+      const link = [...document.querySelectorAll<HTMLAnchorElement>('a')].find(
+        (candidato) => candidato.textContent?.trim() === pacote,
+      );
+
+      expect(link, `sem link para ${pacote}`).toBeDefined();
+      expect(link?.getAttribute('href')).toBe(`https://www.npmjs.com/package/${pacote}`);
+    }
+  });
+
+  it('o repositorio esta acessivel da pagina', () => {
+    const paraOGitHub = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].filter(
+      (link) => (link.getAttribute('href') ?? '').startsWith('https://github.com/'),
+    );
+
+    expect(paraOGitHub.length).toBeGreaterThan(0);
+  });
+
+  it('nada no rodape promete uma pagina que ainda nao existe', () => {
+    // A extensao do VSCode ainda nao esta no Marketplace. Enquanto nao estiver,
+    // ela aparece como texto, nao como link que daria 404.
+    const paraOMarketplace = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].filter(
+      (link) => (link.getAttribute('href') ?? '').includes('marketplace.visualstudio.com'),
+    );
+
+    expect(paraOMarketplace).toEqual([]);
+    expect(document.querySelector('.site-footer__soon')).not.toBeNull();
+  });
+
   it('todo botao tem tipo declarado', () => {
     const semTipo = [...document.querySelectorAll('button')].filter(
       (botao) => botao.getAttribute('type') !== 'button',

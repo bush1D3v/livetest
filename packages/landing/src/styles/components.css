@@ -153,6 +153,26 @@
   font-size: 0.85rem;
 }
 
+/*
+ * Botao so de icone. O padding vira quadrado e o `gap` do .btn some, para o
+ * glifo ficar centrado em vez de encostado na borda esquerda.
+ */
+.btn--icon {
+  gap: 0;
+  padding: 0.44rem;
+  aspect-ratio: 1;
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+}
+
+.btn--icon:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
 .btn--lg {
   padding: 0.82rem 1.5rem;
   font-size: 1rem;
