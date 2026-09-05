@@ -938,29 +938,6 @@
   color: var(--accent);
 }
 
-/*
- * Item ainda nao publicado. Ocupa o lugar de um link sem se passar por um:
- * nao e clicavel, e o "em breve" diz por que.
- */
-.site-footer__soon {
-  display: block;
-  font-size: 0.88rem;
-  color: var(--text-faint);
-  padding: 0.18rem 0;
-}
-
-.site-footer__soon em {
-  /* Em coluna estreita o selo quebrava no meio ("EM" numa linha, "BREVE" na
-     outra). Como bloco ele desce inteiro, e ainda le melhor como etiqueta. */
-  display: block;
-  margin-top: 0.15rem;
-  font-style: normal;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  opacity: 0.75;
-}
 
 .site-footer__legal {
   grid-column: 1 / -1;

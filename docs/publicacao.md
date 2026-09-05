@@ -306,34 +306,60 @@ O Marketplace não é do GitHub nem da Microsoft-em-geral: é do **Azure DevOps*
 Essa é a única parte burocrática das três, e ela pega quase todo mundo de
 surpresa. São três contas encadeadas: Microsoft → Azure DevOps → publisher.
 
-### 3.1 Criar o publisher
+### 3.1 O pré-requisito que ninguém avisa
 
-1. **Conta Microsoft.** Qualquer uma serve (Outlook, Live, corporativa).
-2. **Organização no Azure DevOps.** Entre em
-   [dev.azure.com](https://dev.azure.com) com a conta acima e crie uma
-   organização. O nome não aparece para ninguém — ela existe só para emitir o
-   token.
-3. **Personal Access Token.** No canto superior direito: **User settings →
-   Personal Access Tokens → New Token**.
+Publicar no Marketplace é **gratuito**. O que custa é chegar até ele.
 
-   Estes três campos precisam estar exatamente assim, ou o `vsce` responde
-   `401 Unauthorized` sem explicar por quê:
+A documentação da Microsoft lista, entre os pré-requisitos para criar uma
+organização nova no Azure DevOps: *"You need an active Azure subscription to
+create new organizations."* A tela de criação pede "select an Azure subscription
+for billing" — e a assinatura Azure gratuita exige cartão para verificação de
+identidade.
 
-   | Campo        | Valor                                     |
-   | ------------ | ----------------------------------------- |
-   | Organization | **All accessible organizations**          |
-   | Expiration   | até 1 ano                                 |
-   | Scopes       | **Custom defined** → **Marketplace → Manage** |
+A página de preços do Azure DevOps ainda diz que cartão não é necessário. Ela
+está desatualizada para organizações novas.
 
-   Copie o token na hora. Ele não é exibido de novo.
+Três formas de passar por isso:
 
-4. **Publisher.** Vá em
-   [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage/createpublisher)
-   e crie um publisher com o ID **`livetest`** — tem que ser idêntico ao campo
-   `publisher` de `packages/vscode-extension/package.json`. Se o ID estiver
-   ocupado, escolha outro e ajuste o manifesto.
+| Caminho | Cartão? | Observação |
+| ------- | ------- | ---------- |
+| **Organização que você já acessa** | não | *"Existing organizations… aren't affected"*. O PAT vale de qualquer org onde você seja membro |
+| **Azure for Students** | não | Exige e-mail acadêmico de universidade |
+| **Conta Azure gratuita** | sim | Cartão é verificação. O limite de gastos vem ligado e **desliga** o serviço em vez de cobrar |
 
-### 3.2 Empacotar e conferir antes
+Fora isso, o **Open VSX** (seção 3.6) publica sem conta Microsoft nenhuma.
+
+### 3.2 Criar o publisher
+
+[marketplace.visualstudio.com/manage/createpublisher](https://marketplace.visualstudio.com/manage/createpublisher)
+
+- **ID**: `livetest` — idêntico ao campo `publisher` do manifesto, e
+  **impossível de alterar depois**
+- **Name**: o nome de exibição; este dá para trocar
+- **Verified domain**: exige registro TXT no DNS. Um subdomínio `.vercel.app`
+  não serve — deixe em branco
+
+### 3.3 O token — só para publicar pela linha de comando
+
+**Se você for subir o `.vsix` pelo site (seção 3.5), pule este passo inteiro.**
+O upload pela web não usa token.
+
+Para o `vsce`, o token sai do Azure DevOps: **User settings → Personal Access
+Tokens → New Token**. Estes três campos precisam estar exatamente assim, ou o
+`vsce` responde `401 Unauthorized` sem explicar por quê:
+
+| Campo        | Valor                                     |
+| ------------ | ----------------------------------------- |
+| Organization | **All accessible organizations**          |
+| Expiration   | até 1 ano                                 |
+| Scopes       | **Custom defined** → **Marketplace → Manage** |
+
+O primeiro é o que mais pega: deixar selecionada só a sua organização não
+funciona, porque o Marketplace é um serviço global.
+
+Copie o token na hora. Ele não é exibido de novo.
+
+### 3.4 Empacotar e conferir antes
 
 ```bash
 cd packages/vscode-extension
@@ -358,23 +384,61 @@ code --install-extension livetest-vscode-0.1.0.vsix
 
 Para desinstalar: `code --uninstall-extension livetest.livetest-vscode`.
 
-### 3.3 Publicar
+### 3.5 Publicar
+
+**Pelo site — sem token.** É o caminho mais curto, e o que dispensa todo o
+passo 3.3:
+
+[marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage)
+→ **New extension** → **Visual Studio Code** → arraste o `.vsix`.
+
+O Marketplace lê `publisher`, `name`, `version`, ícone e README de dentro do
+próprio pacote. Não há nada a preencher.
+
+**Pela linha de comando** — mais prático para atualizações, exige o token:
 
 ```bash
-npx vsce login livetest    # cola o PAT quando pedir
-npm run publish:marketplace   # build + vsce publish --no-dependencies
+npx vsce publish --no-dependencies --packagePath livetest-vscode-0.1.0.vsix --pat $VSCE_PAT
 ```
 
-Ou sem guardar o token na máquina:
+`--packagePath` publica o `.vsix` que você já testou, em vez de reempacotar.
+
+Em ambos os casos a extensão entra em verificação por alguns minutos. A página
+HTML pode levar mais tempo para aparecer que a extensão para ficar instalável —
+para saber o estado real, sem depender da página:
 
 ```bash
-npx vsce publish --no-dependencies --pat $VSCE_PAT
+# Se baixar, está publicada.
+curl -sI -L "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/livetest/vsextensions/livetest-vscode/0.1.0/vspackage"
+
+code --install-extension livetest.livetest-vscode
 ```
 
-A extensão aparece na busca do Marketplace em alguns minutos. A página fica em
-`https://marketplace.visualstudio.com/items?itemName=livetest.livetest-vscode`.
+#### O displayName precisa ser único no Marketplace inteiro
 
-### 3.4 Versões seguintes
+Não só dentro do seu publisher. `Live Test Runner` e `LiveTest` já pertencem a
+outras extensões, e o upload é recusado com *"This extension display name is
+taken"*. O `name` e o `publisher` não entram nessa disputa — só o `displayName`.
+
+Para checar antes de subir:
+
+```bash
+curl -s -X POST "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"   -H "Content-Type: application/json"   -H "Accept: application/json;api-version=3.0-preview.1"   -d '{"filters":[{"criteria":[{"filterType":10,"value":"SEU NOME"}],"pageSize":10,"pageNumber":1}],"flags":914}'
+```
+
+A convenção do Marketplace aceita nome + tagline — "GitLens — Git supercharged",
+"Prettier - Code formatter" —, o que resolve a colisão e ainda ajuda na busca.
+
+### 3.6 Open VSX — sem conta Microsoft nenhuma
+
+VSCodium, Cursor, Gitpod e Windsurf não acessam o Marketplace da Microsoft.
+Para alcançá-los, publique também no [Open VSX](https://open-vsx.org):
+
+```bash
+npx ovsx publish livetest-vscode-0.1.0.vsix -p <token-do-open-vsx>
+```
+
+### 3.7 Versões seguintes
 
 O `vsce` sobe a versão para você:
 
@@ -387,15 +451,6 @@ Diferente do npm, o Marketplace deixa **despublicar** (`vsce unpublish
 livetest.livetest-vscode`) — mas isso apaga instalações, avaliações e contagem de
 downloads. Trate como igualmente definitivo.
 
-### 3.5 Open VSX (opcional)
-
-VSCodium, Cursor, Gitpod e Windsurf não acessam o Marketplace da Microsoft.
-Para alcançá-los, publique também no [Open VSX](https://open-vsx.org):
-
-```bash
-npx ovsx publish livetest-vscode-0.1.0.vsix -p <token-do-open-vsx>
-```
-
 ---
 
 ## Resumo
@@ -405,7 +460,8 @@ npx ovsx publish livetest-vscode-0.1.0.vsix -p <token-do-open-vsx>
 | Site               | Vercel                   | `vercel --prod`            | sim, sempre         |
 | `@livetest/core`   | npm                      | `npm run release:npm`      | não                 |
 | `@livetest/cli`    | npm                      | (mesmo comando, na ordem)  | não                 |
-| Extensão           | Marketplace do VSCode    | `npm run publish:marketplace` | tecnicamente, sim   |
+| Extensão           | Marketplace do VSCode    | upload do `.vsix` pelo site   | tecnicamente, sim   |
+| Extensão           | Open VSX                 | `npx ovsx publish`            | sim                 |
 
 ## Problemas comuns
 
@@ -417,4 +473,8 @@ npx ovsx publish livetest-vscode-0.1.0.vsix -p <token-do-open-vsx>
 | `vsce ERROR 401 Unauthorized`                       | o PAT não está em "All accessible organizations" + Marketplace/Manage |
 | `vsce ERROR ... publisher 'x' doesn't exist`        | o campo `publisher` não bate com o publisher criado no Marketplace |
 | `vsce` tentando empacotar o `node_modules` inteiro  | faltou `--no-dependencies`                                        |
+| `This extension display name is taken`              | o `displayName` já existe em **outra** extensão do Marketplace     |
+| `ENOENT: no such file or directory, open '...vsix'` | o `.vsix` foi gerado em outra pasta — `npm run package` sem `--out` grava na raiz do pacote |
+| Azure DevOps pedindo assinatura para criar org      | restrição para organizações **novas**; veja a seção 3.1            |
+| Extensão instalável mas a página do Marketplace dá 404 | indexação da página é mais lenta que a publicação; aguarde        |
 | Vercel: `No Output Directory named "public" found`  | o `vercel.json` não foi lido — confira o Root Directory na raiz    |

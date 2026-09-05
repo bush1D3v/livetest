@@ -823,15 +823,18 @@ describe('index.html — estrutura', () => {
     expect(paraOGitHub.length).toBeGreaterThan(0);
   });
 
-  it('nada no rodape promete uma pagina que ainda nao existe', () => {
-    // A extensao do VSCode ainda nao esta no Marketplace. Enquanto nao estiver,
-    // ela aparece como texto, nao como link que daria 404.
-    const paraOMarketplace = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].filter(
-      (link) => (link.getAttribute('href') ?? '').includes('marketplace.visualstudio.com'),
+  it('a extensao aponta para a propria pagina no Marketplace', () => {
+    // O ID e `publisher`.`name` do manifesto da extensao. Errar essa composicao
+    // — usar so o publisher, ou o nome do arquivo .vsix — da um link que abre
+    // uma pagina de erro do Marketplace, nao um 404 evidente.
+    const link = [...document.querySelectorAll<HTMLAnchorElement>('a')].find((candidato) =>
+      candidato.textContent?.trim().startsWith('Extensão VSCode'),
     );
 
-    expect(paraOMarketplace).toEqual([]);
-    expect(document.querySelector('.site-footer__soon')).not.toBeNull();
+    expect(link, 'sem link para a extensao').toBeDefined();
+    expect(link?.getAttribute('href')).toBe(
+      'https://marketplace.visualstudio.com/items?itemName=livetest.livetest-vscode',
+    );
   });
 
   it('todo botao tem tipo declarado', () => {
