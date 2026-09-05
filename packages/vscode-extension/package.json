@@ -2,7 +2,7 @@
   "name": "livetest-vscode",
   "displayName": "livetest — os testes certos, no instante do save",
   "description": "Painel visual do Live Test Runner: status por arquivo, motivo da execucao e log de cada teste, em tempo real.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "license": "MIT",
   "publisher": "livetest",
   "private": true,
