@@ -11,3 +11,13 @@ __pycache__/
 *.pyc
 .venv/
 .env
+# Vinculo local da Vercel (guarda os IDs de projeto e de organizacao).
+.vercel/
+# Ja excluido do deploy pelo .vercelignore; nao deve ir para o repositorio.
+.peer-session-backup/
+# Tokens de publicacao (NPM_TOKEN, VSCE_PAT) nunca versionados.
+.env
+.env.*
+npm-debug.log*
+# Runbook de publicacao: guia local do mantenedor, fora do repositorio.
+docs/publicacao.md
