@@ -1,0 +1,329 @@
+/*
+ * O texto da documentacao.
+ *
+ * Tudo aqui vale dentro de `.doc__texto`, que e o HTML gerado a partir do
+ * Markdown. Nenhuma classe e escrita a mao no conteudo: o seletor e a propria
+ * tag, porque quem escreve a documentacao escreve Markdown e nao deveria
+ * precisar saber que classes existem.
+ */
+
+.doc__texto h1 {
+  font-size: clamp(2rem, 4.2vw, 2.65rem);
+  letter-spacing: -0.035em;
+  margin-bottom: 0.9rem;
+}
+
+.doc__texto h2 {
+  font-size: 1.5rem;
+  margin-top: 3rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: calc(var(--topo-altura) + 1rem);
+}
+
+.doc__texto h3 {
+  font-size: 1.16rem;
+  margin-top: 2.2rem;
+  scroll-margin-top: calc(var(--topo-altura) + 1rem);
+}
+
+.doc__texto h4 {
+  font-size: 1rem;
+  margin-top: 1.8rem;
+  color: var(--text-muted);
+}
+
+.doc__texto h1 + p {
+  font-size: 1.08rem;
+  color: var(--text-muted);
+}
+
+.doc__texto p,
+.doc__texto ul,
+.doc__texto ol {
+  margin-top: 1rem;
+}
+
+.doc__texto ul,
+.doc__texto ol {
+  padding-left: 1.3rem;
+}
+
+.doc__texto li + li {
+  margin-top: 0.35rem;
+}
+
+.doc__texto li > ul,
+.doc__texto li > ol {
+  margin-top: 0.35rem;
+}
+
+.doc__texto li::marker {
+  color: var(--text-faint);
+}
+
+.doc__texto a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.18s var(--ease);
+}
+
+.doc__texto a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.doc__texto strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.doc__texto hr {
+  margin: 2.5rem 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+/* Cerquilha que aparece ao passar o mouse sobre um titulo. */
+.header-anchor {
+  margin-left: 0.4rem;
+  color: var(--text-faint);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.16s var(--ease);
+}
+
+:is(h2, h3):hover > .header-anchor,
+.header-anchor:focus-visible {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------ codigo inline */
+
+:where(.doc__texto, .home) :is(p, li, td, th, h2, h3, h4) > code {
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
+  font-size: 0.855em;
+  white-space: nowrap;
+}
+
+.doc__texto a > code {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------ blocos de codigo */
+
+.code-block-wrap {
+  position: relative;
+  margin-top: 1.25rem;
+}
+
+.code-block {
+  overflow-x: auto;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--code-line);
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-size: 0.83rem;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.code-block code {
+  font-size: inherit;
+}
+
+.code-block__lang {
+  position: absolute;
+  top: 0.55rem;
+  right: 3.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5b6680;
+  pointer-events: none;
+}
+
+.code-block__copy {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #262e42;
+  background: #131929;
+  color: #93a0bb;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  opacity: 0;
+  transition:
+    opacity 0.18s var(--ease),
+    color 0.18s var(--ease),
+    border-color 0.18s var(--ease);
+}
+
+.code-block-wrap:hover .code-block__copy,
+.code-block__copy:focus-visible {
+  opacity: 1;
+}
+
+.code-block__copy:hover {
+  color: #dbe3f2;
+  border-color: #3a455f;
+}
+
+.code-block__copy.is-done {
+  color: var(--pass);
+  border-color: color-mix(in srgb, var(--pass) 45%, transparent);
+  opacity: 1;
+}
+
+.code-block__copy.is-error {
+  color: var(--fail);
+  border-color: color-mix(in srgb, var(--fail) 45%, transparent);
+  opacity: 1;
+}
+
+/* Tokens do realce, validos sobre a superficie escura dos dois temas. */
+.tok-comment {
+  color: #5b6680;
+  font-style: italic;
+}
+.tok-key {
+  color: #7dd3fc;
+}
+.tok-string {
+  color: #86efac;
+}
+.tok-literal {
+  color: #c4b5fd;
+}
+.tok-number {
+  color: #fbbf24;
+}
+.tok-punct {
+  color: #64748b;
+}
+.tok-prompt {
+  color: #4ade80;
+}
+.tok-command {
+  color: #e8ecf5;
+  font-weight: 600;
+}
+.tok-flag {
+  color: #c4b5fd;
+}
+.tok-arg {
+  color: #7dd3fc;
+}
+.tok-value {
+  color: #86efac;
+}
+.tok-keyword {
+  color: #c084fc;
+}
+.tok-type {
+  color: #7dd3fc;
+}
+.tok-pass {
+  color: #4ade80;
+  font-weight: 700;
+}
+.tok-fail {
+  color: #fb7185;
+  font-weight: 700;
+}
+
+/* ----------------------------------------------------------------- tabelas */
+
+.table-wrap {
+  margin-top: 1.4rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.doc__texto table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.doc__texto th,
+.doc__texto td {
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.doc__texto thead th {
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.doc__texto tbody tr:last-child :is(td, th) {
+  border-bottom: none;
+}
+
+.doc__texto tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+/* ------------------------------------------------------------- citacao e caixas */
+
+.doc__texto blockquote {
+  margin-top: 1.25rem;
+  padding: 0.1rem 0 0.1rem 1.1rem;
+  border-left: 3px solid var(--line-strong);
+  color: var(--text-muted);
+}
+
+.callout {
+  margin-top: 1.4rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--callout-cor) 32%, transparent);
+  background: color-mix(in srgb, var(--callout-cor) 8%, transparent);
+  --callout-cor: var(--accent);
+}
+
+.callout--tip {
+  --callout-cor: var(--pass);
+}
+.callout--info {
+  --callout-cor: var(--accent);
+}
+.callout--warning {
+  --callout-cor: var(--warn);
+}
+.callout--danger {
+  --callout-cor: var(--fail);
+}
+
+.callout__title {
+  font-weight: 700;
+  color: var(--callout-cor);
+  margin-bottom: 0.15rem;
+}
+
+.callout > p:first-child,
+.callout > *:first-child {
+  margin-top: 0;
+}
+
+.callout .code-block-wrap {
+  margin-top: 0.9rem;
+}

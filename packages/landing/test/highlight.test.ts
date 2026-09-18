@@ -1,13 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { escapeHtml, highlight } from '../src/modules/highlight.js';
+import { escapeHtml, highlight, resolverLinguagem } from '../src/modules/highlight.js';
 
-/** Remove a marcacao para conferir que o texto sobreviveu intacto. */
-const semTags = (html: string): string => html.replace(/<[^>]+>/g, '');
+/**
+ * Devolve o texto que o navegador mostraria: sem as tags e com as entidades
+ * desfeitas. E o unico jeito honesto de conferir que o realce nao perdeu nem
+ * inventou caractere, ja que aspas e `&` viajam escapados.
+ */
+const comoSeVe = (html: string): string =>
+  html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 
 describe('escapeHtml', () => {
   it('escapa os caracteres perigosos', () => {
-    expect(escapeHtml('<a href="x">&</a>')).toBe('&lt;a href="x"&gt;&amp;&lt;/a&gt;');
+    expect(escapeHtml('<a href="x">&</a>')).toBe(
+      '&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;',
+    );
   });
 
   it('escapa o & antes dos demais, sem duplicar', () => {
@@ -18,8 +31,8 @@ describe('escapeHtml', () => {
 describe('highlight — jsonc', () => {
   it('marca chave, string, numero e literal', () => {
     const html = highlight('{ "a": "b", "n": 12, "ok": true }', 'jsonc');
-    expect(html).toContain('<span class="tok-key">"a"</span>');
-    expect(html).toContain('<span class="tok-string">"b"</span>');
+    expect(html).toContain('<span class="tok-key">&quot;a&quot;</span>');
+    expect(html).toContain('<span class="tok-string">&quot;b&quot;</span>');
     expect(html).toContain('<span class="tok-number">12</span>');
     expect(html).toContain('<span class="tok-literal">true</span>');
   });
@@ -36,7 +49,7 @@ describe('highlight — jsonc', () => {
   it('nao confunde barras dentro de string com comentario', () => {
     const html = highlight('{ "url": "http://x/y" }', 'jsonc');
     expect(html).not.toContain('tok-comment');
-    expect(html).toContain('<span class="tok-string">"http://x/y"</span>');
+    expect(html).toContain('<span class="tok-string">&quot;http://x/y&quot;</span>');
   });
 
   it('marca comentario que vem depois de um valor', () => {
@@ -57,11 +70,11 @@ describe('highlight — jsonc', () => {
 
   it('lida com aspas escapadas dentro da string', () => {
     const html = highlight('{ "a": "diz \\"oi\\"" }', 'jsonc');
-    expect(semTags(html)).toBe('{ "a": "diz \\"oi\\"" }');
+    expect(comoSeVe(html)).toBe('{ "a": "diz \\"oi\\"" }');
   });
 
   it('preserva o texto de linhas sem token', () => {
-    expect(semTags(highlight('   ', 'jsonc'))).toBe('   ');
+    expect(comoSeVe(highlight('   ', 'jsonc'))).toBe('   ');
   });
 
   it('realca varias linhas de uma vez', () => {
@@ -99,7 +112,7 @@ describe('highlight — output', () => {
 
   it('preserva campo sem sinal de igual', () => {
     const html = highlight('LIVETEST solto', 'output');
-    expect(semTags(html)).toBe('LIVETEST solto');
+    expect(comoSeVe(html)).toBe('LIVETEST solto');
   });
 
   it('esmaece o motivo da selecao', () => {
@@ -114,5 +127,74 @@ describe('highlight — output', () => {
 
   it('escapa linhas comuns', () => {
     expect(highlight('a < b', 'output')).toBe('a &lt; b');
+  });
+});
+
+describe('resolverLinguagem', () => {
+  it('reconhece os apelidos que a documentacao usa', () => {
+    expect(resolverLinguagem('json')).toBe('jsonc');
+    expect(resolverLinguagem('shell')).toBe('bash');
+    expect(resolverLinguagem('TypeScript')).toBe('ts');
+    expect(resolverLinguagem('  text  ')).toBe('output');
+  });
+
+  it('nome desconhecido sai sem realce, em vez de quebrar', () => {
+    expect(resolverLinguagem('go')).toBe('plain');
+    expect(resolverLinguagem('')).toBe('plain');
+  });
+});
+
+describe('highlight — typescript', () => {
+  it('separa palavra-chave, tipo, literal e string', () => {
+    const html = highlight("export const a: Depth = 'self';", 'ts');
+    expect(html).toContain('<span class="tok-keyword">export</span>');
+    expect(html).toContain('<span class="tok-keyword">const</span>');
+    expect(html).toContain('<span class="tok-type">Depth</span>');
+    expect(html).toContain('<span class="tok-string">&#39;self&#39;</span>');
+  });
+
+  it('marca a chamada de funcao e o nome de campo', () => {
+    const html = highlight('createEngine({ config: 1 })', 'ts');
+    expect(html).toContain('<span class="tok-command">createEngine</span>');
+    expect(html).toContain('<span class="tok-key">config</span>');
+    expect(html).toContain('<span class="tok-number">1</span>');
+  });
+
+  it('reconhece os valores embutidos', () => {
+    expect(highlight('return null;', 'ts')).toContain('<span class="tok-literal">null</span>');
+  });
+
+  it('esmaece comentario de linha', () => {
+    expect(highlight('const a = 1; // nota', 'ts')).toContain(
+      '<span class="tok-comment">// nota</span>',
+    );
+  });
+
+  it('atravessa comentario de bloco de varias linhas', () => {
+    const html = highlight(['/**', ' * doc', ' */', 'const a = 1;'].join('\n'), 'ts');
+    expect(html).toContain('<span class="tok-comment"> * doc</span>');
+    expect(html).toContain('<span class="tok-keyword">const</span>');
+  });
+
+  it('fecha o bloco no meio da linha e volta a realcar', () => {
+    const html = highlight('/* nota */ const a = 1;', 'ts');
+    expect(html).toContain('<span class="tok-keyword">const</span>');
+  });
+
+  it('escapa o que nao vira token', () => {
+    expect(highlight('a < b', 'ts')).toContain('&lt;');
+  });
+
+  it('aceita crase e aspas duplas como string', () => {
+    expect(highlight('const a = `x`;', 'ts')).toContain('<span class="tok-string">`x`</span>');
+    expect(highlight('const a = "x";', 'ts')).toContain(
+      '<span class="tok-string">&quot;x&quot;</span>',
+    );
+  });
+});
+
+describe('highlight — sem linguagem', () => {
+  it('apenas escapa', () => {
+    expect(highlight('<a> & "b"', 'plain')).toBe('&lt;a&gt; &amp; &quot;b&quot;');
   });
 });

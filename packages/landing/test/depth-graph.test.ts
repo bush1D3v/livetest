@@ -23,10 +23,13 @@ describe('DEPTH_HOPS e DEPTH_LABELS', () => {
     expect(DEPTH_HOPS).toEqual({ self: 0, direct: 1, transitive: Number.POSITIVE_INFINITY });
   });
 
-  it('descreve as três profundidades', () => {
-    expect(Object.keys(DEPTH_LABELS)).toEqual(['self', 'direct', 'transitive']);
-    for (const rotulo of Object.values(DEPTH_LABELS)) {
-      expect(rotulo.descricao.length).toBeGreaterThan(10);
+  it('descreve as três profundidades nos dois idiomas', () => {
+    expect(Object.keys(DEPTH_LABELS)).toEqual(['en', 'pt']);
+    for (const porIdioma of Object.values(DEPTH_LABELS)) {
+      expect(Object.keys(porIdioma)).toEqual(['self', 'direct', 'transitive']);
+      for (const rotulo of Object.values(porIdioma)) {
+        expect(rotulo.descricao.length).toBeGreaterThan(10);
+      }
     }
   });
 });
@@ -223,6 +226,32 @@ describe('explainTest', () => {
       }),
     ).toBe('é o arquivo que você salvou');
   });
+
+  it('diz as mesmas coisas em inglês', () => {
+    const proprio = { id: 'a.test.ts', source: 'a.test.ts', depth: 0, chain: ['a.test.ts'] };
+    expect(explainTest(proprio, 'en')).toBe('is the file you saved');
+
+    const salvo = { id: 'login.test.ts', source: 'login.ts', depth: 0, chain: ['login.ts'] };
+    expect(explainTest(salvo, 'en')).toBe('covers login.ts, the file you saved');
+
+    const direto = {
+      id: 'header.test.ts',
+      source: 'header.ts',
+      depth: 1,
+      chain: ['login.ts', 'header.ts'],
+    };
+    expect(explainTest(direto, 'en')).toBe('covers header.ts, which imports login.ts (1 level)');
+
+    const longe = {
+      id: 'layout.test.ts',
+      source: 'layout.ts',
+      depth: 2,
+      chain: ['login.ts', 'header.ts', 'layout.ts'],
+    };
+    expect(explainTest(longe, 'en')).toBe(
+      'covers layout.ts, which imports login.ts through header.ts (2 levels)',
+    );
+  });
 });
 
 describe('explainReach', () => {
@@ -256,6 +285,21 @@ describe('explainReach', () => {
     expect(explainReach({ id: 'a.ts', depth: 1, chain: ['b.ts', 'a.ts'] })).toBe(
       'a.ts importa b.ts (1 nível)',
     );
+  });
+
+  it('diz as mesmas coisas em inglês', () => {
+    expect(explainReach({ id: 'login.ts', depth: 0, chain: ['login.ts'] }, 'en')).toBe(
+      'the file you saved',
+    );
+    expect(
+      explainReach({ id: 'header.ts', depth: 1, chain: ['login.ts', 'header.ts'] }, 'en'),
+    ).toBe('header.ts imports login.ts (1 level)');
+    expect(
+      explainReach(
+        { id: 'layout.ts', depth: 2, chain: ['login.ts', 'header.ts', 'layout.ts'] },
+        'en',
+      ),
+    ).toBe('layout.ts imports login.ts through header.ts (2 levels)');
   });
 });
 

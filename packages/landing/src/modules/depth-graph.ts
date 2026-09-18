@@ -24,6 +24,8 @@
  * @packageDocumentation
  */
 
+import type { Locale } from './i18n.js';
+
 /** Profundidades oferecidas na demonstração. */
 export type Depth = 'self' | 'direct' | 'transitive';
 
@@ -102,18 +104,53 @@ export const DEPTH_HOPS: Readonly<Record<Depth, number>> = {
 };
 
 /** Texto curto de cada profundidade, usado nos botões e na legenda. */
-export const DEPTH_LABELS: Readonly<Record<Depth, { titulo: string; descricao: string }>> = {
-  self: {
-    titulo: 'self',
-    descricao: 'Roda apenas os testes do arquivo que você salvou.',
+export const DEPTH_LABELS: Readonly<
+  Record<Locale, Readonly<Record<Depth, { titulo: string; descricao: string }>>>
+> = {
+  en: {
+    self: { titulo: 'self', descricao: 'Runs only the tests of the file you saved.' },
+    direct: { titulo: 'direct', descricao: 'Adds the tests of whoever imports that file directly.' },
+    transitive: { titulo: 'transitive', descricao: 'Walks the whole chain of importers, all the way up.' },
   },
-  direct: {
-    titulo: 'direct',
-    descricao: 'Inclui os testes de quem importa esse arquivo diretamente.',
+  pt: {
+    self: { titulo: 'self', descricao: 'Roda apenas os testes do arquivo que você salvou.' },
+    direct: { titulo: 'direct', descricao: 'Inclui os testes de quem importa esse arquivo diretamente.' },
+    transitive: { titulo: 'transitive', descricao: 'Sobe toda a cadeia de importadores, até o topo.' },
   },
-  transitive: {
-    titulo: 'transitive',
-    descricao: 'Sobe toda a cadeia de importadores, até o topo.',
+};
+
+/** Fragmentos das frases de explicação, por idioma. */
+const FRASES: Readonly<
+  Record<
+    Locale,
+    {
+      proprio: string;
+      cobreSalvo: (alvo: string) => string;
+      cobre: (alvo: string, origem: string, via: string, saltos: string) => string;
+      alcancadoSalvo: string;
+      alcancado: (alvo: string, origem: string, via: string, saltos: string) => string;
+      via: (nomes: string) => string;
+      saltos: (quantos: number) => string;
+    }
+  >
+> = {
+  en: {
+    proprio: 'is the file you saved',
+    cobreSalvo: (alvo) => `covers ${alvo}, the file you saved`,
+    cobre: (alvo, origem, via, saltos) => `covers ${alvo}, which imports ${origem}${via} (${saltos})`,
+    alcancadoSalvo: 'the file you saved',
+    alcancado: (alvo, origem, via, saltos) => `${alvo} imports ${origem}${via} (${saltos})`,
+    via: (nomes) => ` through ${nomes}`,
+    saltos: (quantos) => `${quantos} ${quantos === 1 ? 'level' : 'levels'}`,
+  },
+  pt: {
+    proprio: 'é o arquivo que você salvou',
+    cobreSalvo: (alvo) => `cobre ${alvo}, o arquivo que você salvou`,
+    cobre: (alvo, origem, via, saltos) => `cobre ${alvo}, que importa ${origem}${via} (${saltos})`,
+    alcancadoSalvo: 'arquivo que você salvou',
+    alcancado: (alvo, origem, via, saltos) => `${alvo} importa ${origem}${via} (${saltos})`,
+    via: (nomes) => ` via ${nomes}`,
+    saltos: (quantos) => `${quantos} ${quantos === 1 ? 'nível' : 'níveis'}`,
   },
 };
 
@@ -266,20 +303,19 @@ function nomeCurto(caminho: string): string {
  * // 'cobre layout.ts, que importa login.ts via header.ts (2 níveis)'
  * ```
  */
-export function explainTest(test: SelectedTest): string {
+export function explainTest(test: SelectedTest, locale: Locale = 'pt'): string {
+  const frases = FRASES[locale];
   const alvo = nomeCurto(test.source);
+
   if (test.depth === 0) {
-    return test.id === test.source
-      ? 'é o arquivo que você salvou'
-      : `cobre ${alvo}, o arquivo que você salvou`;
+    return test.id === test.source ? frases.proprio : frases.cobreSalvo(alvo);
   }
 
   const origem = nomeCurto(test.chain[0] as string);
   const intermediarios = test.chain.slice(1, -1).map(nomeCurto);
-  const via = intermediarios.length > 0 ? ` via ${intermediarios.join(' → ')}` : '';
-  const unidade = test.depth === 1 ? 'nível' : 'níveis';
+  const via = intermediarios.length > 0 ? frases.via(intermediarios.join(' → ')) : '';
 
-  return `cobre ${alvo}, que importa ${origem}${via} (${test.depth} ${unidade})`;
+  return frases.cobre(alvo, origem, via, frases.saltos(test.depth));
 }
 
 /**
@@ -291,14 +327,14 @@ export function explainTest(test: SelectedTest): string {
  * // 'header.ts importa login.ts (1 nível)'
  * ```
  */
-export function explainReach(node: ReachedNode): string {
-  if (node.depth === 0) return 'arquivo que você salvou';
+export function explainReach(node: ReachedNode, locale: Locale = 'pt'): string {
+  const frases = FRASES[locale];
+  if (node.depth === 0) return frases.alcancadoSalvo;
 
   const origem = nomeCurto(node.chain[0] as string);
   const alvo = nomeCurto(node.id);
   const intermediarios = node.chain.slice(1, -1).map(nomeCurto);
-  const via = intermediarios.length > 0 ? ` via ${intermediarios.join(' → ')}` : '';
-  const unidade = node.depth === 1 ? 'nível' : 'níveis';
+  const via = intermediarios.length > 0 ? frases.via(intermediarios.join(' → ')) : '';
 
-  return `${alvo} importa ${origem}${via} (${node.depth} ${unidade})`;
+  return frases.alcancado(alvo, origem, via, frases.saltos(node.depth));
 }

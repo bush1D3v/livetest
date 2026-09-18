@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
 
 /**
- * Testes que precisam de DOM: revelacao, area de transferencia e os modulos de
- * `src/setup/`, montados sobre o `index.html` real.
+ * Testes que precisam de DOM.
+ *
+ * A pagina montada aqui nao e um HTML de teste escrito a mao: e a mesma que o
+ * build publica, gerada pelas funcoes de `src/build/`. Um gancho que some da
+ * moldura ou um `data-` renomeado quebra estes testes na hora, que e o unico
+ * jeito de a fiacao e a marcacao nao se separarem em silencio.
  */
 
 import fs from 'node:fs';
@@ -10,17 +14,62 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { renderHome } from '../src/build/home.js';
+import { renderDocumento, resolvedorDeLinks, rotaCompleta } from '../src/build/layout.js';
+import { renderMarkdown } from '../src/build/markdown.js';
 import { copyText, legacyCopy } from '../src/modules/clipboard.js';
-import { setupReveal, type RevealObserverFactory } from '../src/modules/reveal.js';
 import type { FrameScheduler } from '../src/modules/motion.js';
+import { setupReveal, type RevealObserverFactory } from '../src/modules/reveal.js';
+import type { Locale } from '../src/modules/i18n.js';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
-const HTML = fs.readFileSync(path.join(AQUI, '..', 'index.html'), 'utf8');
+const CONTEUDO = path.join(AQUI, '..', 'content');
 
-/** Monta o `index.html` real dentro do jsdom. */
-function montarPagina(): void {
-  const corpo = /<body[^>]*>([\s\S]*)<\/body>/.exec(HTML)?.[1] ?? '';
-  document.body.innerHTML = corpo;
+// O jsdom nao implementa `scrollIntoView`. A busca a usa para manter o
+// resultado realcado dentro da vista enquanto as setas percorrem a lista, o que
+// no navegador funciona e aqui precisa de um substituto.
+Element.prototype.scrollIntoView = (): void => {};
+
+/**
+ * Monta no jsdom uma pagina real do site.
+ *
+ * @param locale - Idioma da pagina.
+ * @param rota - Rota sem idioma; `''` monta a home.
+ */
+function montarPagina(locale: Locale = 'en', rota = ''): void {
+  const home = rota === '';
+  const caminho = rotaCompleta(locale, rota);
+
+  let corpo = '';
+  let headings: ReturnType<typeof renderMarkdown>['headings'] = [];
+
+  if (home) {
+    corpo = renderHome(locale);
+  } else {
+    const bruto = fs.readFileSync(path.join(CONTEUDO, locale, `${rota}.md`), 'utf8');
+    const convertido = renderMarkdown(bruto.replace(/^---\n[\s\S]*?\n---\n?/, ''), {
+      resolverLink: resolvedorDeLinks(caminho, locale),
+    });
+    corpo = convertido.html;
+    headings = convertido.headings;
+  }
+
+  const html = renderDocumento({
+    locale,
+    rota,
+    titulo: 'Titulo',
+    descricao: 'Resumo',
+    corpo,
+    headings,
+    home,
+    versao: '0.1.0',
+  });
+
+  const atributos = /<body([^>]*)>/.exec(html)?.[1] ?? '';
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/.exec(html)?.[1] ?? '';
+  for (const achado of atributos.matchAll(/([\w-]+)="([^"]*)"/g)) {
+    document.body.setAttribute(achado[1] as string, achado[2] as string);
+  }
 }
 
 /** Observador falso: o teste decide quando o elemento "entra na tela". */
@@ -120,6 +169,42 @@ describe('setupReveal', () => {
     expect(manual.desconectado()).toBe(true);
   });
 
+  it('usa o IntersectionObserver do navegador quando ele existe', async () => {
+    const criado = vi.fn();
+    class Falso {
+      constructor(
+        public callback: (entries: Array<{ target: Element; isIntersecting: boolean }>) => void,
+        public opcoes: unknown,
+      ) {
+        criado(opcoes);
+      }
+      observe(): void {}
+      disconnect(): void {}
+    }
+
+    vi.stubGlobal('IntersectionObserver', Falso);
+
+    try {
+      const { intersectionFactory, observadorPadrao } = await import('../src/modules/reveal.js');
+      expect(observadorPadrao()).toBe(intersectionFactory);
+
+      const recebidas: Array<{ target: Element; isIntersecting: boolean }> = [];
+      const observador = intersectionFactory((entries) => recebidas.push(...entries)) as Falso;
+
+      expect(criado).toHaveBeenCalledWith({ rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+      const alvo = document.querySelector('[data-reveal]') as Element;
+      observador.callback([{ target: alvo, isIntersecting: true }]);
+      expect(recebidas).toEqual([{ target: alvo, isIntersecting: true }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('revela tudo onde o navegador nao tem o observador', async () => {
+    const { observadorPadrao } = await import('../src/modules/reveal.js');
+    expect(observadorPadrao()).toBeUndefined();
+  });
+
   it('aceita seletor e classe customizados', () => {
     document.body.innerHTML = '<p class="alvo"></p>';
     setupReveal({ selector: '.alvo', revealedClass: 'visivel', immediate: true });
@@ -199,69 +284,141 @@ describe('legacyCopy', () => {
   });
 });
 
-describe('setupTerminal', () => {
-  beforeEach(montarPagina);
+describe('setupCopyButtons', () => {
+  beforeEach(() => montarPagina('pt'));
 
-  it('desenha o roteiro inteiro no modo estatico', async () => {
-    const { setupTerminal, TERMINAL_SCRIPT } = await import('../src/setup/terminal.js');
-    const terminal = setupTerminal({ immediate: true });
-
-    expect(terminal.mounted).toBe(true);
-    const saida = document.querySelector('[data-terminal-output]');
-    expect(saida?.querySelectorAll('.terminal__line')).toHaveLength(TERMINAL_SCRIPT.length);
-    expect(saida?.textContent).toContain('rodou porque');
+  it('liga os botoes da caixa de instalacao', async () => {
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    expect(setupCopyButtons().count).toBe(2);
   });
 
-  it('anima quadro a quadro quando o movimento e permitido', async () => {
-    const { setupTerminal } = await import('../src/setup/terminal.js');
-    const manual = agendadorManual();
-    const terminal = setupTerminal({ scheduler: manual.scheduler });
+  it('copia o comando e confirma na tela, no idioma da pagina', async () => {
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const agendados: Array<() => void> = [];
 
-    manual.disparar(0);
-    manual.disparar(400);
-    const saida = document.querySelector('[data-terminal-output]');
-    expect(saida?.textContent?.length).toBeGreaterThan(0);
-
-    terminal.stop();
-    expect(terminal.mounted).toBe(true);
-  });
-
-  it('marca a linha em digitacao com o cursor', async () => {
-    const { setupTerminal } = await import('../src/setup/terminal.js');
-    const manual = agendadorManual();
-    setupTerminal({ scheduler: manual.scheduler });
-
-    manual.disparar(0);
-    manual.disparar(30);
-    expect(document.querySelector('.terminal__line--typing')).not.toBeNull();
-  });
-
-  it('atualiza o distintivo conforme o resultado', async () => {
-    const { setupTerminal, badgeStateFor } = await import('../src/setup/terminal.js');
-    setupTerminal({ immediate: true });
-
-    const distintivo = document.querySelector<HTMLElement>('[data-terminal-badge]');
-    // O roteiro termina em falha; o distintivo precisa refletir isso.
-    expect(distintivo?.dataset['state']).toBe('failed');
-    expect(distintivo?.textContent).toBe('4 falhas');
-
-    expect(badgeStateFor([{ tone: 'pass' }])).toBe('passed');
-    expect(badgeStateFor([{ tone: 'muted' }])).toBe('idle');
-    expect(badgeStateFor([])).toBe('idle');
-  });
-
-  it('escapa marcacao vinda do roteiro', async () => {
-    const { setupTerminal } = await import('../src/setup/terminal.js');
-    setupTerminal({
-      immediate: true,
-      script: [{ text: '<script>&</script>', instant: true }],
+    setupCopyButtons({
+      locale: 'pt',
+      copy: { clipboard: { writeText } },
+      schedule: (callback) => void agendados.push(callback),
     });
-    const saida = document.querySelector('[data-terminal-output]');
-    expect(saida?.querySelector('script')).toBeNull();
-    expect(saida?.textContent).toContain('<script>&</script>');
+
+    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]') as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(botao.classList.contains('is-done')).toBe(true));
+
+    expect(writeText).toHaveBeenCalledWith('npm install --save-dev @livetest/cli');
+    expect(botao.textContent?.trim()).toBe('Copiado');
+
+    agendados[0]?.();
+    expect(botao.classList.contains('is-done')).toBe(false);
+    expect(botao.textContent?.trim()).toBe('Copiar');
   });
 
-  it('nao quebra quando o elemento nao existe', async () => {
+  it('avisa em ingles quando a copia falha', async () => {
+    montarPagina('en');
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    setupCopyButtons({ copy: { clipboard: undefined, fallback: () => false }, schedule: () => {} });
+
+    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]') as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(botao.classList.contains('is-error')).toBe(true));
+    expect(botao.textContent?.trim()).toBe('Copy manually');
+  });
+
+  it('copia o codigo que o botao carrega, e nao o bloco ja realcado', async () => {
+    montarPagina('en', 'guide/getting-started');
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    setupCopyButtons({ copy: { clipboard: { writeText } }, schedule: () => {} });
+
+    const botao = document.querySelector<HTMLButtonElement>(
+      '.code-block__copy',
+    ) as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(writeText).toHaveBeenCalledWith('$ npm install --save-dev @livetest/cli');
+  });
+
+  it('aceita uma raiz que nao e o documento inteiro', async () => {
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    const secao = document.querySelector('.heroi') as HTMLElement;
+    expect(setupCopyButtons({ root: secao }).count).toBe(1);
+  });
+
+  it('cai no ingles quando o idioma pedido nao e publicado', async () => {
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    setupCopyButtons({
+      locale: 'fr',
+      copy: { clipboard: undefined, fallback: () => true },
+      schedule: () => {},
+    });
+
+    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]') as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(botao.textContent?.trim()).toBe('Copied'));
+  });
+
+  it('usa o proprio botao como rotulo quando nao ha um dentro', async () => {
+    document.body.innerHTML =
+      '<div data-copy-root><code data-copy-source>x</code><button data-copy-button>c</button></div>';
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    setupCopyButtons({
+      locale: 'en',
+      copy: { clipboard: undefined, fallback: () => true },
+      schedule: () => {},
+    });
+
+    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]') as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(botao.textContent).toBe('Copied'));
+  });
+
+  it('devolve o botao ao normal sozinho, sem agendador injetado', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const { setupCopyButtons } = await import('../src/setup/copy.js');
+      setupCopyButtons({ locale: 'en', copy: { clipboard: undefined, fallback: () => true } });
+
+      const botao = document.querySelector<HTMLButtonElement>(
+        '[data-copy-button]',
+      ) as HTMLButtonElement;
+      botao.click();
+
+      await vi.waitFor(() => expect(botao.textContent?.trim()).toBe('Copied'));
+      vi.advanceTimersByTime(1800);
+      expect(botao.textContent?.trim()).toBe('Copiar');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignora um botao sem texto nenhum para copiar', async () => {
+    document.body.innerHTML = '<button data-copy-button></button>';
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    expect(setupCopyButtons().count).toBe(0);
+  });
+
+  it('sem nada injetado, usa a area de transferencia do proprio navegador', async () => {
+    const { setupCopyButtons } = await import('../src/setup/copy.js');
+    const agendados: Array<() => void> = [];
+    Object.assign(document, { execCommand: vi.fn().mockReturnValue(true) });
+
+    // Nem `copy` nem `locale`: e o caminho que a pagina publicada percorre.
+    setupCopyButtons({ schedule: (callback) => void agendados.push(callback) });
+
+    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]') as HTMLButtonElement;
+    botao.click();
+    await vi.waitFor(() => expect(botao.textContent?.trim()).toBe('Copied'));
+    expect(agendados).toHaveLength(1);
+  });
+});
+
+describe('setupTerminal', () => {
+  beforeEach(() => montarPagina('pt'));
+
+  it('nao monta quando nao ha terminal na pagina', async () => {
     document.body.innerHTML = '';
     const { setupTerminal } = await import('../src/setup/terminal.js');
     const terminal = setupTerminal();
@@ -269,698 +426,966 @@ describe('setupTerminal', () => {
     expect(() => terminal.stop()).not.toThrow();
   });
 
-  it('funciona sem o distintivo na pagina', async () => {
-    document.querySelector('[data-terminal-badge]')?.remove();
+  it('escreve em portugues quando nao lhe dizem o idioma', async () => {
     const { setupTerminal } = await import('../src/setup/terminal.js');
-    expect(setupTerminal({ immediate: true }).mounted).toBe(true);
+    setupTerminal({ immediate: true });
+
+    const saida = document.querySelector('[data-terminal-output]') as HTMLElement;
+    expect(saida.textContent).toContain('livetest observando ~/projeto');
+  });
+
+  it('entrega o roteiro inteiro no modo estatico', async () => {
+    const { setupTerminal } = await import('../src/setup/terminal.js');
+    setupTerminal({ immediate: true, locale: 'pt' });
+
+    const saida = document.querySelector('[data-terminal-output]') as HTMLElement;
+    expect(saida.textContent).toContain('rodou porque src/header.ts importa src/login.ts');
+    expect(saida.textContent).toContain('LIVETEST batch=batch-2 status=failed');
+  });
+
+  it('escreve o roteiro no idioma da pagina', async () => {
+    montarPagina('en');
+    const { setupTerminal } = await import('../src/setup/terminal.js');
+    setupTerminal({ immediate: true, locale: 'en' });
+
+    const saida = document.querySelector('[data-terminal-output]') as HTMLElement;
+    expect(saida.textContent).toContain('ran because src/header.ts imports src/login.ts');
+    expect(document.querySelector('[data-terminal-badge]')?.textContent).toBe('4 failures');
+  });
+
+  it('o distintivo acompanha o resultado do lote', async () => {
+    const { badgeStateFor, roteiroDoTerminal, setupTerminal } = await import(
+      '../src/setup/terminal.js'
+    );
+
+    expect(badgeStateFor([])).toBe('idle');
+    expect(badgeStateFor([{ tone: 'pass' }])).toBe('passed');
+    expect(badgeStateFor([{ tone: 'pass' }, { tone: 'fail' }])).toBe('failed');
+    expect(roteiroDoTerminal('pt')[0]?.text).toBe('$ npx livetest start');
+
+    const manual = agendadorManual();
+    setupTerminal({ scheduler: manual.scheduler, locale: 'pt' });
+    manual.disparar(0);
+    expect(document.querySelector('[data-terminal-badge]')?.textContent).toBe('observando');
+  });
+
+  it('anima quadro a quadro e para quando pedido', async () => {
+    const { setupTerminal } = await import('../src/setup/terminal.js');
+    const manual = agendadorManual();
+    const terminal = setupTerminal({ scheduler: manual.scheduler, locale: 'pt' });
+
+    manual.disparar(0);
+    manual.disparar(400);
+    const saida = document.querySelector('[data-terminal-output]') as HTMLElement;
+    expect(saida.textContent?.length).toBeGreaterThan(0);
+
+    terminal.stop();
+    expect(() => manual.disparar(800)).not.toThrow();
   });
 });
 
 describe('setupGraph', () => {
-  beforeEach(montarPagina);
+  beforeEach(() => montarPagina('pt', 'guide/depth'));
 
-  it('desenha um chip por no e uma linha por aresta', async () => {
+  it('nao monta onde nao ha demonstracao', async () => {
+    document.body.innerHTML = '';
+    const { setupGraph } = await import('../src/setup/graph.js');
+    const grafo = setupGraph();
+    expect(grafo.mounted).toBe(false);
+    expect(grafo.current()).toBe('direct');
+    expect(() => grafo.select('self')).not.toThrow();
+  });
+
+  it('desenha um no por arquivo e uma linha por aresta', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
     const { DEMO_GRAPH } = await import('../src/modules/depth-graph.js');
-    const demo = setupGraph();
+    setupGraph();
 
-    expect(demo.mounted).toBe(true);
     expect(document.querySelectorAll('.graph-node')).toHaveLength(DEMO_GRAPH.nodes.length);
     expect(document.querySelectorAll('.graph-edge')).toHaveLength(DEMO_GRAPH.edges.length);
   });
 
-  it('comeca em direct e marca o arquivo alterado', async () => {
+  it('comeca em direct e marca o botao correspondente', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-
-    expect(demo.current()).toBe('direct');
-    expect(document.querySelectorAll('.graph-node.is-changed')).toHaveLength(1);
-    expect(
-      document.querySelector<HTMLElement>('[data-depth="direct"]')?.getAttribute('aria-selected'),
-    ).toBe('true');
-  });
-
-  it('troca o realce ao selecionar transitive', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-
-    const antes = document.querySelectorAll('.graph-node.is-test-run').length;
-    demo.select('transitive');
-    const depois = document.querySelectorAll('.graph-node.is-test-run').length;
-
-    expect(antes).toBe(3);
-    expect(depois).toBe(4);
-    expect(document.querySelectorAll('.graph-node.is-dim')).toHaveLength(0);
-  });
-
-  it('self acende so o arquivo salvo e o teste que o cobre', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    setupGraph().select('self');
-
-    // Dos oito nos, ficam acesos apenas login.ts e login.test.ts.
-    expect(document.querySelectorAll('.graph-node.is-dim')).toHaveLength(6);
-    expect(document.querySelectorAll('.graph-node.is-test-run')).toHaveLength(1);
-    // Nenhum import e percorrido, mas a cobertura do proprio arquivo acende.
-    expect(document.querySelectorAll('.graph-edge--import.is-active')).toHaveLength(0);
-    expect(document.querySelectorAll('.graph-edge--covers.is-active')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-graph-tests] li')).toHaveLength(1);
-  });
-
-  it('lista os testes com a explicacao de cada um', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    setupGraph().select('transitive');
-
-    const itens = [...document.querySelectorAll('[data-graph-tests] li')];
-    expect(itens).toHaveLength(4);
-    expect(itens.map((li) => li.querySelector('.graph-demo__test-name')?.textContent)).toContain(
-      'layout.test.ts',
-    );
-    expect(document.querySelector('[data-graph-tests]')?.textContent).toContain('via header.ts');
-  });
-
-  it('atualiza a legenda e a configuracao exibida', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-
-    demo.select('transitive');
-    expect(document.querySelector('[data-graph-caption]')?.textContent).toContain(
-      '4 arquivos de teste',
-    );
-    expect(document.querySelector('[data-graph-config]')?.textContent).toContain('"transitive"');
-
-    demo.select('direct');
-    expect(document.querySelector('[data-graph-config]')?.textContent).not.toContain('overrides');
-  });
-
-  it('usa o singular quando so um teste roda', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    setupGraph().select('self');
-    expect(document.querySelector('[data-graph-caption]')?.textContent).toContain(
-      '1 arquivo de teste',
+    setupGraph();
+    expect(document.querySelector('[data-depth="direct"]')?.getAttribute('aria-selected')).toBe(
+      'true',
     );
   });
 
-  it('usa o plural quando mais de um teste roda', async () => {
+  it('troca a profundidade ao clicar', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    setupGraph().select('direct');
-    expect(document.querySelector('[data-graph-caption]')?.textContent).toContain(
-      '3 arquivos de teste',
-    );
-  });
-
-  it('responde ao clique nos botoes', async () => {
-    const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
+    const grafo = setupGraph();
 
     document.querySelector<HTMLElement>('[data-depth="transitive"]')?.click();
-    expect(demo.current()).toBe('transitive');
+    expect(grafo.current()).toBe('transitive');
+    expect(document.querySelectorAll('[data-graph-tests] li')).toHaveLength(4);
   });
 
-  it('ignora clique em botao com profundidade invalida', async () => {
+  it('ignora um botao com profundidade desconhecida', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    const botao = document.querySelector<HTMLElement>('[data-depth="self"]');
-    botao?.setAttribute('data-depth', 'inventada');
+    const grafo = setupGraph();
 
-    const demo = setupGraph();
-    botao?.click();
-    expect(demo.current()).toBe('direct');
+    const botao = document.querySelector<HTMLElement>('[data-depth="self"]') as HTMLElement;
+    botao.dataset['depth'] = 'inventada';
+    botao.click();
+    expect(grafo.current()).toBe('direct');
   });
 
-  it('navega com as setas do teclado', async () => {
+  it('navega entre as profundidades com as setas', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-    const botao = document.querySelector<HTMLElement>('[data-depth="direct"]');
+    const grafo = setupGraph();
+    const botao = document.querySelector<HTMLElement>('[data-depth="direct"]') as HTMLElement;
 
-    botao?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(demo.current()).toBe('transitive');
+    botao.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(grafo.current()).toBe('transitive');
 
-    document
-      .querySelector<HTMLElement>('[data-depth="transitive"]')
-      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(demo.current()).toBe('direct');
+    botao.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(grafo.current()).toBe('direct');
+
+    botao.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(grafo.current()).toBe('direct');
   });
 
-  it('ignora teclas que nao sao setas', async () => {
+  it('circula ao passar do fim', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-    document
-      .querySelector<HTMLElement>('[data-depth="direct"]')
-      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(demo.current()).toBe('direct');
+    const grafo = setupGraph({ initial: 'transitive' });
+    const botao = document.querySelector<HTMLElement>('[data-depth="transitive"]') as HTMLElement;
+
+    botao.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(grafo.current()).toBe('self');
   });
 
-  it('nao quebra quando o palco nao existe', async () => {
-    document.body.innerHTML = '';
+  it('marca o arquivo salvo, os alcancados e os apagados', async () => {
     const { setupGraph } = await import('../src/setup/graph.js');
-    const demo = setupGraph();
-    expect(demo.mounted).toBe(false);
-    expect(demo.current()).toBe('direct');
-    expect(() => demo.select('self')).not.toThrow();
-  });
-});
+    setupGraph().select('self');
 
-describe('setupCodeBlocks', () => {
-  beforeEach(montarPagina);
-
-  it('realca os blocos estaticos', async () => {
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    const code = setupCodeBlocks();
-
-    expect(code.highlighted).toBeGreaterThan(0);
-    expect(document.querySelector('.tok-prompt')).not.toBeNull();
-    expect(document.querySelector('.tok-command')).not.toBeNull();
+    expect(document.querySelectorAll('.graph-node.is-changed')).toHaveLength(1);
+    expect(document.querySelectorAll('.graph-node.is-dim').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.graph-node.is-test-run')).toHaveLength(1);
   });
 
-  it('comeca na aba de JavaScript', async () => {
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    expect(setupCodeBlocks().activeTab()).toBe('js');
-    expect(document.querySelector('[data-config-body]')?.textContent).toContain('vitest');
+  it('declara o gradiente das arestas ativas uma vez so', async () => {
+    const { setupGraph } = await import('../src/setup/graph.js');
+    setupGraph();
+    setupGraph();
+    expect(document.querySelectorAll('#edge-gradient')).toHaveLength(1);
   });
 
-  it('troca o conteudo ao clicar em outra aba', async () => {
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    const code = setupCodeBlocks();
-
-    document.querySelector<HTMLElement>('[data-config-tab="python"]')?.click();
-    expect(code.activeTab()).toBe('python');
-    expect(document.querySelector('[data-config-body]')?.textContent).toContain('pytest');
-    expect(
-      document
-        .querySelector('[data-config-tab="python"]')
-        ?.getAttribute('aria-selected'),
-    ).toBe('true');
-  });
-
-  it('mostra o exemplo de outra linguagem', async () => {
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    setupCodeBlocks();
-    document.querySelector<HTMLElement>('[data-config-tab="outra"]')?.click();
-    expect(document.querySelector('[data-config-body]')?.textContent).toContain('"go"');
-  });
-
-  it('trata exemplo ausente sem quebrar', async () => {
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    const code = setupCodeBlocks({ examples: {} });
-    expect(code.activeTab()).toBe('js');
-    expect(document.querySelector('[data-config-body]')?.textContent).toBe('');
-  });
-
-  it('funciona em uma pagina sem a secao de configuracao', async () => {
-    document.body.innerHTML = '<pre><code data-code="bash">$ ls</code></pre>';
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    const code = setupCodeBlocks();
-    expect(code.highlighted).toBe(1);
-    expect(code.activeTab()).toBeNull();
-  });
-
-  it('ignora blocos vazios', async () => {
-    document.body.innerHTML = '<code data-code="bash"></code>';
-    const { setupCodeBlocks } = await import('../src/setup/code.js');
-    expect(setupCodeBlocks().highlighted).toBe(0);
-  });
-});
-
-describe('setupCopyButtons', () => {
-  beforeEach(montarPagina);
-
-  it('liga todos os botoes da pagina', async () => {
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    expect(setupCopyButtons().count).toBe(2);
-  });
-
-  it('copia e mostra o retorno visual', async () => {
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    const agendados: Array<() => void> = [];
-
-    setupCopyButtons({
-      copy: { clipboard: { writeText } },
-      schedule: (callback) => void agendados.push(callback),
+  it('descarta aresta que aponta para um no inexistente', async () => {
+    const { setupGraph } = await import('../src/setup/graph.js');
+    const grafo = setupGraph({
+      graph: {
+        nodes: [{ id: 'a', label: 'a', kind: 'source', x: 0, y: 0 }],
+        edges: [{ from: 'a', to: 'fantasma', kind: 'import' }],
+      },
     });
-
-    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]');
-    botao?.click();
-    // O retorno visual so aparece depois que a promessa de copia resolve.
-    await vi.waitFor(() => expect(botao?.classList.contains('is-done')).toBe(true));
-
-    expect(writeText).toHaveBeenCalledWith('npm install --save-dev @livetest/cli');
-    expect(botao?.textContent).toContain('Copiado');
-
-    // O rotulo volta ao original quando o retorno expira.
-    agendados[0]?.();
-    expect(botao?.classList.contains('is-done')).toBe(false);
-    expect(botao?.textContent).toContain('Copiar');
+    expect(grafo.mounted).toBe(true);
+    expect(document.querySelectorAll('.graph-edge')).toHaveLength(0);
   });
 
-  it('avisa quando a copia falha', async () => {
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    setupCopyButtons({
-      copy: { clipboard: undefined, fallback: () => false },
-      schedule: () => {},
-    });
+  it('mostra a configuracao que produz cada profundidade', async () => {
+    const { configFor, setupGraph } = await import('../src/setup/graph.js');
+    setupGraph().select('transitive');
 
-    const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]');
-    botao?.click();
-    await vi.waitFor(() => expect(botao?.classList.contains('is-error')).toBe(true));
-    expect(botao?.textContent).toContain('Copie manualmente');
+    expect(configFor('direct')).not.toContain('overrides');
+    expect(configFor('transitive')).toContain('"src/login.ts": "transitive"');
+    expect(document.querySelector('[data-graph-config]')?.textContent).toContain('transitive');
   });
 
-  it('ignora grupos incompletos', async () => {
-    document.body.innerHTML = '<div data-copy-root><code data-copy-source>x</code></div>';
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    expect(setupCopyButtons().count).toBe(0);
+  it('funciona sem o bloco de configuracao ao lado', async () => {
+    document.querySelector('[data-graph-config]')?.remove();
+    const { setupGraph } = await import('../src/setup/graph.js');
+    expect(setupGraph().mounted).toBe(true);
   });
 
-  it('usa o proprio botao quando nao ha rotulo interno', async () => {
-    document.body.innerHTML =
-      '<div data-copy-root><code data-copy-source>abc</code>' +
-      '<button data-copy-button>Copiar</button></div>';
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    setupCopyButtons({ copy: { clipboard: { writeText } }, schedule: () => {} });
-
-    document.querySelector<HTMLButtonElement>('[data-copy-button]')?.click();
-    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith('abc'));
-  });
-
-  it('usa setTimeout quando nenhum agendador e injetado', async () => {
-    const { setupCopyButtons } = await import('../src/setup/copy.js');
-    const writeText = vi.fn().mockResolvedValue(undefined);
-
-    // Espiar o `setTimeout` mantem o teste sincrono e evita relogios falsos
-    // disputando com a promessa da copia.
-    const agendados: Array<{ callback: () => void; ms: number }> = [];
-    const espia = vi
-      .spyOn(globalThis, 'setTimeout')
-      .mockImplementation(((callback: () => void, ms?: number) => {
-        agendados.push({ callback, ms: ms ?? 0 });
-        return 0 as unknown as ReturnType<typeof setTimeout>;
-      }) as typeof setTimeout);
-
-    try {
-      setupCopyButtons({ copy: { clipboard: { writeText } }, feedbackMs: 10 });
-      const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]');
-      botao?.click();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(botao?.classList.contains('is-done')).toBe(true);
-      expect(agendados[0]?.ms).toBe(10);
-
-      agendados[0]?.callback();
-      expect(botao?.classList.contains('is-done')).toBe(false);
-    } finally {
-      espia.mockRestore();
-    }
+  it('funciona sem o elemento SVG das arestas', async () => {
+    const { setupGraph } = await import('../src/setup/graph.js');
+    const grupo = document.querySelector('[data-graph-edges]') as Element;
+    document.body.appendChild(grupo);
+    expect(setupGraph().mounted).toBe(true);
   });
 });
 
 describe('setupChrome', () => {
-  beforeEach(montarPagina);
+  beforeEach(() => montarPagina('en', 'reference/config'));
 
-  it('calcula o progresso de leitura', async () => {
-    const { scrollProgress } = await import('../src/setup/chrome.js');
-    expect(scrollProgress(0, 2000, 1000)).toBe(0);
-    expect(scrollProgress(500, 2000, 1000)).toBe(0.5);
-    expect(scrollProgress(1000, 2000, 1000)).toBe(1);
-    expect(scrollProgress(9999, 2000, 1000)).toBe(1);
-  });
-
-  it('devolve zero quando a pagina nao rola', async () => {
-    const { scrollProgress } = await import('../src/setup/chrome.js');
-    expect(scrollProgress(0, 800, 1000)).toBe(0);
-  });
-
-  it('escolhe a secao atual pela posicao', async () => {
-    const { currentSection } = await import('../src/setup/chrome.js');
-    const secoes = [
-      { id: 'a', top: 0 },
-      { id: 'b', top: 500 },
-      { id: 'c', top: 1000 },
-    ];
-    expect(currentSection(secoes, 200)).toBe('a');
-    expect(currentSection(secoes, 700)).toBe('b');
-    expect(currentSection(secoes, 5000)).toBe('c');
-    expect(currentSection([], 0)).toBeNull();
-  });
-
-  it('marca o header como fixo depois de rolar', async () => {
-    const { setupChrome } = await import('../src/setup/chrome.js');
+  it('marca o cabecalho depois que a pagina rola', async () => {
+    const { setupChrome, scrollProgress, currentSection } = await import('../src/setup/chrome.js');
     const chrome = setupChrome();
-    const header = document.querySelector('[data-header]');
+    const topo = document.querySelector('.topo') as HTMLElement;
 
-    expect(header?.classList.contains('is-stuck')).toBe(false);
-    Object.defineProperty(window, 'scrollY', { value: 120, configurable: true });
+    expect(topo.classList.contains('is-stuck')).toBe(false);
+    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true });
     window.dispatchEvent(new Event('scroll'));
-    expect(header?.classList.contains('is-stuck')).toBe(true);
+    expect(topo.classList.contains('is-stuck')).toBe(true);
+
+    expect(scrollProgress(500, 2000, 1000)).toBe(0.5);
+    expect(scrollProgress(0, 500, 1000)).toBe(0);
+    expect(currentSection([{ id: 'a', top: 0 }], -10)).toBeNull();
 
     chrome.destroy();
   });
 
   it('atualiza a barra de progresso', async () => {
     const { setupChrome } = await import('../src/setup/chrome.js');
-    Object.defineProperty(document.documentElement, 'scrollHeight', {
-      value: 3000,
-      configurable: true,
+    setupChrome();
+    Object.defineProperty(window, 'scrollY', { value: 100, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+
+    const barra = document.querySelector('[data-scroll-progress]') as HTMLElement;
+    expect(barra.style.getPropertyValue('--progress')).not.toBe('');
+  });
+
+  it('acende no indice a secao em que a leitura esta', async () => {
+    const { setupChrome } = await import('../src/setup/chrome.js');
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('.indice a')];
+    expect(links.length).toBeGreaterThan(1);
+
+    // O jsdom nao faz layout: as posicoes entram a mao.
+    links.forEach((link, n) => {
+      const alvo = document.getElementById(link.getAttribute('href')?.slice(1) ?? '');
+      Object.defineProperty(alvo, 'offsetTop', { value: n * 1000, configurable: true });
     });
-    Object.defineProperty(window, 'innerHeight', { value: 1000, configurable: true });
-    Object.defineProperty(window, 'scrollY', { value: 1000, configurable: true });
 
-    const chrome = setupChrome();
-    chrome.update();
-    const barra = document.querySelector<HTMLElement>('[data-scroll-progress]');
-    expect(barra?.style.getPropertyValue('--progress')).toBe('0.5000');
-    chrome.destroy();
+    setupChrome();
+    Object.defineProperty(window, 'scrollY', { value: 2000, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(document.querySelectorAll('.indice a.is-current')).toHaveLength(1);
   });
 
-  it('destaca o link da secao visivel', async () => {
+  it('segue o cursor na home e para de seguir no modo estatico', async () => {
+    montarPagina('en');
     const { setupChrome } = await import('../src/setup/chrome.js');
-    for (const secao of document.querySelectorAll('section[id]')) {
-      Object.defineProperty(secao, 'offsetTop', { value: 0, configurable: true });
-    }
-    const chrome = setupChrome();
-    chrome.update();
-    expect(document.querySelectorAll('.site-nav a.is-current').length).toBeGreaterThan(0);
-    chrome.destroy();
-  });
+    setupChrome();
 
-  it('move o brilho com o cursor', async () => {
-    const { setupChrome } = await import('../src/setup/chrome.js');
-    const chrome = setupChrome();
-    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 120, clientY: 80 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 40, clientY: 60 }));
+    const brilho = document.querySelector('[data-cursor-glow]') as HTMLElement;
+    expect(brilho.style.getPropertyValue('--cursor-x')).toBe('40px');
 
-    const brilho = document.querySelector<HTMLElement>('[data-cursor-glow]');
-    expect(brilho?.style.getPropertyValue('--cursor-x')).toBe('120px');
-    expect(brilho?.style.getPropertyValue('--cursor-on')).toBe('1');
-    chrome.destroy();
-  });
-
-  it('nao registra o brilho quando o movimento e reduzido', async () => {
-    const { setupChrome } = await import('../src/setup/chrome.js');
-    const chrome = setupChrome({ disableCursorGlow: true });
+    montarPagina('en');
+    setupChrome({ disableCursorGlow: true });
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 10, clientY: 10 }));
-
-    const brilho = document.querySelector<HTMLElement>('[data-cursor-glow]');
-    expect(brilho?.style.getPropertyValue('--cursor-on')).toBe('');
-    chrome.destroy();
+    const outro = document.querySelector('[data-cursor-glow]') as HTMLElement;
+    expect(outro.style.getPropertyValue('--cursor-x')).toBe('');
   });
 
-  it('posiciona o halo dentro do cartao de recurso', async () => {
+  it('move o halo dentro do cartao e solta o ouvinte ao destruir', async () => {
+    montarPagina('en');
     const { setupChrome } = await import('../src/setup/chrome.js');
     const chrome = setupChrome();
-    const cartao = document.querySelector<HTMLElement>('.feature');
-    cartao?.dispatchEvent(new MouseEvent('mousemove', { clientX: 40, clientY: 30, bubbles: true }));
+    const cartao = document.querySelector('.cartao') as HTMLElement;
 
-    expect(cartao?.style.getPropertyValue('--mx')).toBe('40px');
+    cartao.dispatchEvent(new MouseEvent('mousemove', { clientX: 12, clientY: 20, bubbles: false }));
+    expect(cartao.style.getPropertyValue('--mx')).toBe('12px');
+
     chrome.destroy();
+    cartao.style.removeProperty('--mx');
+    cartao.dispatchEvent(new MouseEvent('mousemove', { clientX: 99, clientY: 99 }));
+    expect(cartao.style.getPropertyValue('--mx')).toBe('');
   });
 
-  it('funciona em uma pagina sem cromo', async () => {
-    document.body.innerHTML = '';
+  it('ignora um item do indice que nao aponta para lugar nenhum', async () => {
     const { setupChrome } = await import('../src/setup/chrome.js');
-    const chrome = setupChrome();
-    expect(() => {
-      chrome.update();
-      chrome.destroy();
-    }).not.toThrow();
-  });
+    const lista = document.querySelector('.indice ul') as HTMLElement;
+    lista.insertAdjacentHTML('afterbegin', '<li><a>sem destino</a></li>');
 
-  it('ignora links que apontam para secoes inexistentes', async () => {
-    document.body.innerHTML = '<nav class="site-nav"><a href="#fantasma">x</a></nav>';
-    const { setupChrome } = await import('../src/setup/chrome.js');
-    const chrome = setupChrome();
-    chrome.update();
-    expect(document.querySelector('.site-nav a')?.classList.contains('is-current')).toBe(false);
-    chrome.destroy();
-  });
-
-  it('ignora links sem href', async () => {
-    document.body.innerHTML = '<nav class="site-nav"><a>x</a></nav>';
-    const { setupChrome } = await import('../src/setup/chrome.js');
     const chrome = setupChrome();
     expect(() => chrome.update()).not.toThrow();
+
+    const orfao = lista.querySelector('a') as HTMLAnchorElement;
+    expect(orfao.hasAttribute('href')).toBe(false);
+    expect(orfao.classList.contains('is-current')).toBe(false);
     chrome.destroy();
+  });
+
+  it('nao quebra em pagina sem indice nem barra', async () => {
+    document.body.innerHTML = '';
+    const { setupChrome } = await import('../src/setup/chrome.js');
+    expect(() => setupChrome().update()).not.toThrow();
   });
 });
 
-describe('mountLanding', () => {
-  beforeEach(montarPagina);
-
-  it('monta todas as partes da pagina', async () => {
-    const { mountLanding } = await import('../src/main.js');
-    const app = mountLanding({ reducedMotion: true });
-
-    expect(app.reducedMotion).toBe(true);
-    expect(app.terminal.mounted).toBe(true);
-    expect(app.graph.mounted).toBe(true);
-    expect(app.copy.count).toBe(2);
-    expect(app.code.activeTab()).toBe('js');
-    expect(app.reveal.count).toBeGreaterThan(5);
-
-    app.destroy();
+describe('setupPrefs', () => {
+  beforeEach(() => {
+    montarPagina('en', 'guide/depth');
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
   });
 
-  it('no modo estatico revela tudo e nao anima', async () => {
-    const { mountLanding } = await import('../src/main.js');
-    const app = mountLanding({ reducedMotion: true });
+  /** O menu suspenso de um dos dois seletores. */
+  const menu = (qual: string): HTMLElement =>
+    document.querySelector<HTMLElement>(`[data-menu="${qual}"]`) as HTMLElement;
 
-    expect(document.querySelectorAll('[data-reveal]:not(.is-revealed)')).toHaveLength(0);
-    expect(document.querySelector('.terminal__line--typing')).toBeNull();
+  it('aplica o tema escuro quando nunca houve escolha', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
 
-    app.destroy();
+    expect(prefs.theme()).toBe('dark');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    prefs.destroy();
   });
 
-  it('consulta a preferencia do sistema quando nada e informado', async () => {
-    const original = globalThis.matchMedia;
-    globalThis.matchMedia = ((query: string) =>
-      ({ matches: true, media: query })) as unknown as typeof matchMedia;
+  it('retoma a escolha guardada', async () => {
+    window.localStorage.setItem('livetest:theme', 'light');
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+
+    expect(prefs.applied()).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    prefs.destroy();
+  });
+
+  it('abre o menu, troca o tema e fecha', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    const tema = menu('tema');
+
+    tema.querySelector<HTMLElement>('[aria-haspopup]')?.click();
+    expect(tema.classList.contains('is-open')).toBe(true);
+    expect(tema.querySelector('[aria-haspopup]')?.getAttribute('aria-expanded')).toBe('true');
+
+    tema.querySelector<HTMLElement>('[data-tema="light"]')?.click();
+    expect(prefs.theme()).toBe('light');
+    expect(window.localStorage.getItem('livetest:theme')).toBe('light');
+    expect(tema.classList.contains('is-open')).toBe(false);
+    prefs.destroy();
+  });
+
+  it('marca a opcao vigente e troca o icone', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+
+    prefs.setTheme('light');
+    expect(menu('tema').querySelector('[data-tema="light"]')?.hasAttribute('data-ativo')).toBe(true);
+    expect(document.querySelector<HTMLElement>('[data-tema-icone="light"]')?.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('[data-tema-icone="dark"]')?.hidden).toBe(true);
+
+    prefs.setTheme('dark');
+    expect(menu('tema').querySelector('[data-tema="light"]')?.hasAttribute('data-ativo')).toBe(
+      false,
+    );
+    prefs.destroy();
+  });
+
+  it('abrir um menu fecha o outro', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+
+    menu('idioma').querySelector<HTMLElement>('[aria-haspopup]')?.click();
+    menu('tema').querySelector<HTMLElement>('[aria-haspopup]')?.click();
+
+    expect(menu('idioma').classList.contains('is-open')).toBe(false);
+    expect(menu('tema').classList.contains('is-open')).toBe(true);
+    prefs.destroy();
+  });
+
+  it('clicar duas vezes no gatilho fecha o menu', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    const gatilho = menu('tema').querySelector<HTMLElement>('[aria-haspopup]') as HTMLElement;
+
+    gatilho.click();
+    gatilho.click();
+    expect(menu('tema').classList.contains('is-open')).toBe(false);
+    prefs.destroy();
+  });
+
+  it('fecha ao clicar fora e ao apertar Escape', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    const gatilho = menu('tema').querySelector<HTMLElement>('[aria-haspopup]') as HTMLElement;
+
+    gatilho.click();
+    document.body.click();
+    expect(menu('tema').classList.contains('is-open')).toBe(false);
+
+    gatilho.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(menu('tema').classList.contains('is-open')).toBe(false);
+    prefs.destroy();
+  });
+
+  it('ignora um valor de tema que nao existe', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    const opcao = menu('tema').querySelector<HTMLElement>('[data-tema="light"]') as HTMLElement;
+
+    opcao.dataset['tema'] = 'sepia';
+    opcao.click();
+    expect(prefs.theme()).toBe('dark');
+    prefs.destroy();
+  });
+
+  it('guarda o idioma escolhido e desarma o redirecionamento da aba', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+
+    menu('idioma').querySelector<HTMLElement>('[data-escolher-idioma="pt"]')?.click();
+    expect(window.localStorage.getItem('livetest:locale')).toBe('pt');
+    expect(window.sessionStorage.getItem('livetest:auto')).toBe('1');
+    prefs.destroy();
+  });
+
+  it('ignora um idioma que nao e publicado', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    const opcao = menu('idioma').querySelector<HTMLElement>('[data-escolher-idioma="pt"]') as HTMLElement;
+
+    opcao.dataset['escolherIdioma'] = 'fr';
+    opcao.click();
+    expect(window.localStorage.getItem('livetest:locale')).toBeNull();
+    prefs.destroy();
+  });
+
+  it('navega mesmo quando a sessao esta bloqueada', async () => {
+    const original = window.sessionStorage.setItem;
+    window.sessionStorage.setItem = () => {
+      throw new Error('bloqueado');
+    };
 
     try {
-      const { mountLanding } = await import('../src/main.js');
-      const app = mountLanding();
-      expect(app.reducedMotion).toBe(true);
-      app.destroy();
+      const { setupPrefs } = await import('../src/setup/prefs.js');
+      const prefs = setupPrefs();
+      expect(() =>
+        menu('idioma').querySelector<HTMLElement>('[data-escolher-idioma="pt"]')?.click(),
+      ).not.toThrow();
+      prefs.destroy();
     } finally {
-      globalThis.matchMedia = original;
+      window.sessionStorage.setItem = original;
     }
   });
 
-  it('o grafo montado responde a interacao', async () => {
-    const { mountLanding } = await import('../src/main.js');
-    const app = mountLanding({ reducedMotion: true });
+  it('acompanha o sistema enquanto a escolha for system', async () => {
+    const ouvintes: Array<() => void> = [];
+    let escuro = false;
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      () =>
+        ({
+          get matches() {
+            return escuro;
+          },
+          addEventListener: (_: string, ouvinte: () => void) => void ouvintes.push(ouvinte),
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
 
-    document.querySelector<HTMLElement>('[data-depth="transitive"]')?.click();
-    expect(app.graph.current()).toBe('transitive');
-    expect(document.querySelectorAll('[data-graph-tests] li')).toHaveLength(4);
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
 
-    app.destroy();
+    prefs.setTheme('system');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+
+    escuro = true;
+    for (const ouvinte of ouvintes) ouvinte();
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+
+    prefs.setTheme('light');
+    escuro = false;
+    for (const ouvinte of ouvintes) ouvinte();
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    prefs.destroy();
   });
 
-  it('destroy pode ser chamado sem efeitos colaterais', async () => {
-    const { mountLanding } = await import('../src/main.js');
-    const app = mountLanding({ reducedMotion: false });
+  it('segue navegando quando a sessao esta bloqueada e nao ha navigator', async () => {
+    // Uma janela de mentira encena o que o modo privado faz: a gravacao na
+    // sessao lanca, e o link precisa navegar mesmo assim.
+    const janela = {
+      localStorage: window.localStorage,
+      sessionStorage: {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error('bloqueado');
+        },
+      },
+      matchMedia: undefined,
+      navigator: undefined,
+    } as unknown as Window;
+
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs({ doc: document, win: janela });
+
+    expect(() =>
+      menu('idioma').querySelector<HTMLElement>('[data-escolher-idioma="pt"]')?.click(),
+    ).not.toThrow();
+    expect(window.localStorage.getItem('livetest:locale')).toBe('pt');
+    expect(document.querySelector('[data-tecla-modificador]')?.textContent).toBe('Ctrl');
+    prefs.destroy();
+  });
+
+  it('assume escuro em um ambiente sem matchMedia', async () => {
+    const original = window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', { value: undefined, configurable: true });
+
+    try {
+      const { setupPrefs } = await import('../src/setup/prefs.js');
+      const prefs = setupPrefs();
+      prefs.setTheme('system');
+      expect(prefs.applied()).toBe('dark');
+      prefs.destroy();
+    } finally {
+      Object.defineProperty(window, 'matchMedia', { value: original, configurable: true });
+    }
+  });
+
+  it('mostra a tecla de comando em um Mac', async () => {
+    Object.defineProperty(window.navigator, 'platform', {
+      value: 'MacIntel',
+      configurable: true,
+    });
+
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+    expect(document.querySelector('[data-tecla-modificador]')?.textContent).toBe('⌘');
+
+    Object.defineProperty(window.navigator, 'platform', { value: 'Linux', configurable: true });
+    prefs.destroy();
+  });
+
+  it('fecha os menus quando pedido de fora', async () => {
+    const { setupPrefs } = await import('../src/setup/prefs.js');
+    const prefs = setupPrefs();
+
+    menu('tema').querySelector<HTMLElement>('[aria-haspopup]')?.click();
+    prefs.closeMenus();
+    expect(menu('tema').classList.contains('is-open')).toBe(false);
+    prefs.destroy();
+  });
+});
+
+describe('setupNav', () => {
+  beforeEach(() => montarPagina('en', 'guide/depth'));
+
+  it('abre e fecha a gaveta', async () => {
+    const { setupNav } = await import('../src/setup/nav.js');
+    const nav = setupNav();
+    const lateral = document.querySelector('.lateral') as HTMLElement;
+    const cortina = document.querySelector('[data-cortina]') as HTMLElement;
+
+    document.querySelector<HTMLElement>('[data-menu-lateral]')?.click();
+    expect(nav.isOpen()).toBe(true);
+    expect(lateral.classList.contains('is-open')).toBe(true);
+    expect(cortina.hidden).toBe(false);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    document.querySelector<HTMLElement>('[data-menu-lateral]')?.click();
+    expect(nav.isOpen()).toBe(false);
+    expect(cortina.hidden).toBe(true);
+    nav.destroy();
+  });
+
+  it('fecha ao clicar na cortina, em um link do menu, ou com Escape', async () => {
+    const { setupNav } = await import('../src/setup/nav.js');
+    const nav = setupNav();
+
+    nav.toggle();
+    document.querySelector<HTMLElement>('[data-cortina]')?.click();
+    expect(nav.isOpen()).toBe(false);
+
+    nav.toggle();
+    document.querySelector<HTMLElement>('.lateral a')?.click();
+    expect(nav.isOpen()).toBe(false);
+
+    nav.toggle();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(nav.isOpen()).toBe(false);
+
+    // Fechar de novo com ela ja fechada nao faz nada.
+    nav.close();
+    expect(nav.isOpen()).toBe(false);
+    nav.destroy();
+  });
+
+  it('a home tambem tem gaveta, com os links do cabecalho', async () => {
+    montarPagina('en');
+    const { setupNav } = await import('../src/setup/nav.js');
+    const nav = setupNav();
+
+    expect(nav.mounted).toBe(true);
+    document.querySelector<HTMLElement>('[data-menu-lateral]')?.click();
+    expect(nav.isOpen()).toBe(true);
+
+    const movel = document.querySelector('.lateral__grupo--movel') as HTMLElement;
+    expect(movel.querySelectorAll('a').length).toBeGreaterThan(0);
+    nav.destroy();
+  });
+
+  it('nao monta onde nao ha gaveta nenhuma', async () => {
+    document.body.innerHTML = '';
+    const { setupNav } = await import('../src/setup/nav.js');
+    const nav = setupNav();
+
+    expect(nav.mounted).toBe(false);
+    expect(nav.isOpen()).toBe(false);
     expect(() => {
-      app.destroy();
-      app.destroy();
+      nav.toggle();
+      nav.close();
+      nav.destroy();
     }).not.toThrow();
   });
+
+  it('funciona sem a cortina na pagina', async () => {
+    document.querySelector('[data-cortina]')?.remove();
+    const { setupNav } = await import('../src/setup/nav.js');
+    const nav = setupNav();
+
+    nav.toggle();
+    expect(nav.isOpen()).toBe(true);
+    nav.destroy();
+  });
 });
 
-describe('index.html — estrutura', () => {
-  beforeEach(montarPagina);
+describe('setupSearch', () => {
+  const DOCS = [
+    { u: 'guide/depth/', p: 'Propagation depth', s: '', t: 'How far a run propagates.' },
+    {
+      u: 'reference/config/#debounce',
+      p: 'Configuration',
+      s: 'debounce',
+      t: 'Grouping of consecutive saves.',
+    },
+  ];
 
-  it('tem uma unica h1', () => {
-    expect(document.querySelectorAll('h1')).toHaveLength(1);
+  beforeEach(() => montarPagina('en', 'guide/depth'));
+
+  /** Monta a busca com um indice de mentira, sem rede. */
+  async function comIndice(docs = DOCS) {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => docs });
+    await busca.open();
+    return busca;
+  }
+
+  it('nao monta quando o dialogo nao esta na pagina', async () => {
+    document.body.innerHTML = '';
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch();
+
+    expect(busca.mounted).toBe(false);
+    expect(busca.isOpen()).toBe(false);
+    expect(busca.query('x')).toEqual([]);
+    await expect(busca.open()).resolves.toBeUndefined();
+    expect(() => {
+      busca.close();
+      busca.destroy();
+    }).not.toThrow();
   });
 
-  it('todas as secoes de navegacao existem', () => {
-    for (const link of document.querySelectorAll<HTMLAnchorElement>('.site-nav a')) {
-      const id = link.getAttribute('href')?.slice(1) ?? '';
-      expect(document.getElementById(id), `secao ausente: ${id}`).not.toBeNull();
-    }
+  it('abre pelo botao do cabecalho e fecha pelo fundo', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => DOCS });
+    const dialogo = document.querySelector('[data-busca]') as HTMLElement;
+
+    expect(dialogo.hidden).toBe(true);
+    document.querySelector<HTMLElement>('[data-busca-abrir]')?.click();
+    await vi.waitFor(() => expect(busca.isOpen()).toBe(true));
+
+    document.querySelector<HTMLElement>('[data-busca-fechar]')?.click();
+    expect(busca.isOpen()).toBe(false);
+    busca.destroy();
   });
 
-  it('nenhum link interno aponta para uma ancora inexistente', () => {
-    const quebrados = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')]
-      .map((link) => link.getAttribute('href')?.slice(1) ?? '')
-      .filter((id) => id.length > 0 && document.getElementById(id) === null);
-    expect(quebrados).toEqual([]);
+  it('abre e fecha com o atalho de teclado', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => DOCS });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    await vi.waitFor(() => expect(busca.isOpen()).toBe(true));
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', metaKey: true }));
+    expect(busca.isOpen()).toBe(false);
+    busca.destroy();
   });
 
-  it('todo link externo abre em nova aba com rel seguro', () => {
-    // `target="_blank"` sem `rel="noopener"` da a pagina de destino acesso a
-    // `window.opener`. Nao ha razao para deixar passar em uma pagina nova.
-    const inseguros = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="http"]')]
-      .filter(
-        (link) =>
-          link.getAttribute('target') !== '_blank' ||
-          !(link.getAttribute('rel') ?? '').includes('noopener'),
-      )
-      .map((link) => link.getAttribute('href'));
+  it('fecha com Escape e devolve o foco a quem abriu', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => DOCS });
+    const gatilho = document.querySelector<HTMLElement>('[data-busca-abrir]') as HTMLElement;
 
-    expect(inseguros).toEqual([]);
+    gatilho.focus();
+    gatilho.click();
+    await vi.waitFor(() => expect(busca.isOpen()).toBe(true));
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(busca.isOpen()).toBe(false);
+    expect(document.activeElement).toBe(gatilho);
+    busca.destroy();
   });
 
-  it('cada pacote aponta para a propria pagina no npm', () => {
-    // O erro que este teste existe para pegar: um link escrito "@livetest/core"
-    // que leva a uma ancora da propria pagina. Continua sendo um link valido,
-    // entao nenhuma checagem de ancora quebrada o encontra.
-    for (const pacote of ['@livetest/core', '@livetest/cli']) {
-      const link = [...document.querySelectorAll<HTMLAnchorElement>('a')].find(
-        (candidato) => candidato.textContent?.trim() === pacote,
+  it('lista os resultados agrupados por pagina', async () => {
+    const busca = await comIndice();
+    busca.query('debounce');
+
+    const itens = document.querySelectorAll('.busca__item');
+    expect(itens).toHaveLength(1);
+    expect(document.querySelector('.busca__grupo')?.textContent).toBe('Configuration');
+    expect(document.querySelector('.busca__titulo')?.textContent).toBe('debounce');
+    expect(document.querySelector('.busca__contexto')?.textContent).toBe('Configuration');
+    busca.destroy();
+  });
+
+  it('aponta o link para a ancora, a partir da raiz do site', async () => {
+    const busca = await comIndice();
+    busca.query('debounce');
+
+    const item = document.querySelector('.busca__item') as HTMLAnchorElement;
+    expect(item.getAttribute('href')).toBe('../../reference/config/#debounce');
+    busca.destroy();
+  });
+
+  it('realca o que casou', async () => {
+    const busca = await comIndice();
+    busca.query('debounce');
+    expect(document.querySelector('.busca__titulo mark')?.textContent).toBe('debounce');
+    busca.destroy();
+  });
+
+  it('avisa quando nada casa e some com o aviso quando o campo esvazia', async () => {
+    const busca = await comIndice();
+    const vazio = document.querySelector('[data-busca-vazio]') as HTMLElement;
+
+    busca.query('kubernetes');
+    expect(vazio.hidden).toBe(false);
+    expect(document.querySelector('[data-busca-termo]')?.textContent).toBe('kubernetes');
+
+    busca.query('');
+    expect(vazio.hidden).toBe(true);
+    busca.destroy();
+  });
+
+  it('busca a cada tecla digitada', async () => {
+    const busca = await comIndice();
+    const entrada = document.querySelector<HTMLInputElement>('[data-busca-entrada]') as HTMLInputElement;
+
+    entrada.value = 'depth';
+    entrada.dispatchEvent(new Event('input'));
+    expect(document.querySelectorAll('.busca__item')).toHaveLength(1);
+    busca.destroy();
+  });
+
+  it('navega pelos resultados com as setas, circulando nas pontas', async () => {
+    const busca = await comIndice([
+      { u: 'a/', p: 'A', s: '', t: 'alvo um' },
+      { u: 'b/', p: 'B', s: '', t: 'alvo dois' },
+    ]);
+    busca.query('alvo');
+
+    const ativo = (): number =>
+      [...document.querySelectorAll('.busca__item')].findIndex((item) =>
+        item.classList.contains('is-active'),
       );
 
-      expect(link, `sem link para ${pacote}`).toBeDefined();
-      expect(link?.getAttribute('href')).toBe(`https://www.npmjs.com/package/${pacote}`);
-    }
+    expect(ativo()).toBe(0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(ativo()).toBe(1);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(ativo()).toBe(0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    expect(ativo()).toBe(1);
+    busca.destroy();
   });
 
-  it('o repositorio esta acessivel da pagina', () => {
-    const paraOGitHub = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].filter(
-      (link) => (link.getAttribute('href') ?? '').startsWith('https://github.com/'),
-    );
+  it('o mouse tambem move o realce', async () => {
+    const busca = await comIndice([
+      { u: 'a/', p: 'A', s: '', t: 'alvo um' },
+      { u: 'b/', p: 'B', s: '', t: 'alvo dois' },
+    ]);
+    busca.query('alvo');
 
-    expect(paraOGitHub.length).toBeGreaterThan(0);
+    const segundo = document.querySelectorAll('.busca__item')[1] as HTMLElement;
+    segundo.dispatchEvent(new MouseEvent('mousemove'));
+    expect(segundo.classList.contains('is-active')).toBe(true);
+    busca.destroy();
   });
 
-  it('a extensao aponta para a propria pagina no Marketplace', () => {
-    // O ID e `publisher`.`name` do manifesto da extensao. Errar essa composicao
-    // — usar so o publisher, ou o nome do arquivo .vsix — da um link que abre
-    // uma pagina de erro do Marketplace, nao um 404 evidente.
-    const link = [...document.querySelectorAll<HTMLAnchorElement>('a')].find((candidato) =>
-      candidato.textContent?.trim().startsWith('Extensão VSCode'),
-    );
+  it('Enter abre o resultado realcado', async () => {
+    const busca = await comIndice();
+    busca.query('debounce');
 
-    expect(link, 'sem link para a extensao').toBeDefined();
-    expect(link?.getAttribute('href')).toBe(
-      'https://marketplace.visualstudio.com/items?itemName=livetest.livetest-vscode',
-    );
+    const item = document.querySelector('.busca__item') as HTMLAnchorElement;
+    const clique = vi.fn();
+    item.addEventListener('click', (evento) => {
+      evento.preventDefault();
+      clique();
+    });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(clique).toHaveBeenCalled();
+    busca.destroy();
   });
 
-  it('todo botao tem tipo declarado', () => {
-    const semTipo = [...document.querySelectorAll('button')].filter(
-      (botao) => botao.getAttribute('type') !== 'button',
-    );
-    expect(semTipo).toHaveLength(0);
-  });
-
-  it('a tabela comparativa tem legenda e cabecalhos com escopo', () => {
-    const tabela = document.querySelector('table.compare');
-    expect(tabela?.querySelector('caption')).not.toBeNull();
-    for (const th of tabela?.querySelectorAll('th') ?? []) {
-      expect(th.getAttribute('scope')).toBeTruthy();
-    }
-  });
-
-  it('os icones decorativos ficam escondidos de leitores de tela', () => {
-    const svgs = [...document.querySelectorAll('svg')];
-    const expostos = svgs.filter(
-      (svg) => svg.closest('[aria-hidden="true"]') === null && !svg.hasAttribute('aria-hidden'),
-    );
-    expect(expostos).toHaveLength(0);
-  });
-});
-
-describe('intersectionFactory', () => {
-  it('adapta as entradas do IntersectionObserver do navegador', async () => {
-    const original = globalThis.IntersectionObserver;
-    const caixa: { callback?: (entries: unknown[]) => void } = {};
-
-    globalThis.IntersectionObserver = class {
-      constructor(callback: (entries: unknown[]) => void) {
-        caixa.callback = callback;
-      }
-      observe = vi.fn();
-      disconnect = vi.fn();
-      unobserve = vi.fn();
-      takeRecords = vi.fn();
-      root = null;
-      rootMargin = '';
-      thresholds = [];
-    } as unknown as typeof IntersectionObserver;
-
-    try {
-      vi.resetModules();
-      const { intersectionFactory } = await import('../src/modules/reveal.js');
-      expect(intersectionFactory).toBeDefined();
-
-      const recebidas: Array<{ target: Element; isIntersecting: boolean }> = [];
-      const alvo = document.createElement('div');
-      intersectionFactory?.((entries) => recebidas.push(...entries));
-
-      // O adaptador precisa reduzir a entrada nativa ao par que o modulo usa.
-      caixa.callback?.([{ target: alvo, isIntersecting: true, extra: 'ignorado' }]);
-      expect(recebidas).toEqual([{ target: alvo, isIntersecting: true }]);
-    } finally {
-      globalThis.IntersectionObserver = original;
-      vi.resetModules();
-    }
-  });
-});
-
-describe('copyText — caminho alternativo padrao', () => {
-  it('usa o legacyCopy quando nada e injetado', async () => {
-    const execCommand = vi.fn().mockReturnValue(true);
-    Object.assign(document, { execCommand });
-
-    await expect(copyText('texto', { clipboard: undefined })).resolves.toBe(true);
-    expect(execCommand).toHaveBeenCalledWith('copy');
-  });
-});
-
-describe('setupChrome — pagina sem brilho', () => {
-  it('ignora o movimento do cursor', async () => {
-    montarPagina();
-    document.querySelector('[data-cursor-glow]')?.remove();
-
-    const { setupChrome } = await import('../src/setup/chrome.js');
-    const chrome = setupChrome();
+  it('as setas nao quebram com a lista vazia', async () => {
+    const busca = await comIndice();
+    busca.query('kubernetes');
     expect(() =>
-      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5 })),
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })),
     ).not.toThrow();
-    chrome.destroy();
+    busca.destroy();
   });
-});
 
-describe('setupGraph — aresta invalida', () => {
-  it('ignora aresta que aponta para no inexistente', async () => {
-    montarPagina();
-    const { setupGraph } = await import('../src/setup/graph.js');
+  it('consultar antes de o indice chegar devolve vazio', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => DOCS });
+    expect(busca.query('debounce')).toEqual([]);
+    busca.destroy();
+  });
 
-    setupGraph({
-      graph: {
-        nodes: [{ id: 'a.ts', label: 'a', kind: 'source', x: 10, y: 10 }],
-        edges: [
-          { from: 'a.ts', to: 'fantasma.ts', kind: 'import' },
-          { from: 'fantasma.ts', to: 'a.ts', kind: 'import' },
-        ],
+  it('Enter sem resultado nenhum nao faz nada', async () => {
+    const busca = await comIndice();
+    busca.query('kubernetes');
+    expect(() =>
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })),
+    ).not.toThrow();
+    busca.destroy();
+  });
+
+  it('teclas fora do dialogo fechado sao ignoradas', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => DOCS });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(busca.isOpen()).toBe(false);
+    busca.destroy();
+  });
+
+  it('baixa o indice uma vez so', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const carregar = vi.fn(async () => DOCS);
+    const busca = setupSearch({ carregar });
+
+    await busca.open();
+    busca.close();
+    await busca.open();
+
+    expect(carregar).toHaveBeenCalledTimes(1);
+    expect(carregar).toHaveBeenCalledWith('../../search-en.json');
+    busca.destroy();
+  });
+
+  it('continua abrindo quando o indice nao chega', async () => {
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({
+      carregar: async () => {
+        throw new Error('offline');
       },
     });
 
-    expect(document.querySelectorAll('.graph-node')).toHaveLength(1);
-    expect(document.querySelectorAll('.graph-edge')).toHaveLength(0);
+    await busca.open();
+    expect(busca.isOpen()).toBe(true);
+    expect(busca.query('debounce')).toEqual([]);
+    busca.destroy();
+  });
+
+  it('respeita o limite de resultados', async () => {
+    const muitos = Array.from({ length: 40 }, (_, n) => ({
+      u: `p${n}/`,
+      p: `P${n}`,
+      s: '',
+      t: 'alvo repetido',
+    }));
+
+    const { setupSearch } = await import('../src/setup/search.js');
+    const busca = setupSearch({ carregar: async () => muitos, limite: 5 });
+    await busca.open();
+
+    expect(busca.query('alvo')).toHaveLength(5);
+    busca.destroy();
+  });
+
+  it('busca pela rede quando nada e injetado', async () => {
+    const resposta = { json: async () => DOCS };
+    const espia = vi.fn().mockResolvedValue(resposta);
+    vi.stubGlobal('fetch', espia);
+
+    try {
+      const { setupSearch } = await import('../src/setup/search.js');
+      const busca = setupSearch();
+      await busca.open();
+
+      expect(espia).toHaveBeenCalledWith('../../search-en.json');
+      expect(busca.query('debounce')).toHaveLength(1);
+      busca.destroy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('cai no ingles quando a pagina nao diz o idioma', async () => {
+    document.body.removeAttribute('data-locale');
+    document.body.removeAttribute('data-raiz');
+
+    const { setupSearch } = await import('../src/setup/search.js');
+    const carregar = vi.fn(async () => DOCS);
+    const busca = setupSearch({ carregar });
+    await busca.open();
+
+    expect(carregar).toHaveBeenCalledWith('./search-en.json');
+    busca.destroy();
   });
 });
 
-describe('setupCopyButtons — sem opcoes de copia', () => {
-  it('usa o navigator do ambiente', async () => {
-    montarPagina();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    const original = globalThis.navigator;
-    Object.defineProperty(globalThis, 'navigator', {
-      value: { clipboard: { writeText } },
-      configurable: true,
-    });
+describe('mountSite', () => {
+  it('monta a home com terminal e gaveta', async () => {
+    montarPagina('en');
+    const { mountSite } = await import('../src/main.js');
+    const app = mountSite({ reducedMotion: true });
 
-    try {
-      const { setupCopyButtons } = await import('../src/setup/copy.js');
-      setupCopyButtons({ schedule: () => {} });
+    expect(app.locale).toBe('en');
+    expect(app.reducedMotion).toBe(true);
+    expect(app.terminal?.mounted).toBe(true);
+    expect(app.graph).toBeNull();
+    expect(app.nav.mounted).toBe(true);
+    expect(app.search.mounted).toBe(true);
+    expect(app.copy.count).toBe(2);
 
-      const botao = document.querySelector<HTMLButtonElement>('[data-copy-button]');
-      botao?.click();
-      await vi.waitFor(() => expect(botao?.classList.contains('is-done')).toBe(true));
-    } finally {
-      Object.defineProperty(globalThis, 'navigator', { value: original, configurable: true });
-    }
+    app.destroy();
+  });
+
+  it('monta a documentacao com gaveta e sem terminal', async () => {
+    montarPagina('pt', 'guide/depth');
+    const { mountSite } = await import('../src/main.js');
+    const app = mountSite({ reducedMotion: true });
+
+    expect(app.locale).toBe('pt');
+    expect(app.terminal).toBeNull();
+    expect(app.graph?.mounted).toBe(true);
+    expect(app.nav.mounted).toBe(true);
+
+    app.destroy();
+  });
+
+  it('nao monta o grafo em uma pagina que nao o tem', async () => {
+    montarPagina('en', 'changelog');
+    const { mountSite } = await import('../src/main.js');
+    const app = mountSite({ reducedMotion: true });
+
+    expect(app.graph).toBeNull();
+    app.destroy();
+  });
+
+  it('consulta prefers-reduced-motion quando nao lhe dizem', async () => {
+    montarPagina('en', 'changelog');
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList);
+
+    const { mountSite } = await import('../src/main.js');
+    const app = mountSite();
+    expect(app.reducedMotion).toBe(true);
+    app.destroy();
+  });
+
+  it('cai no ingles quando o idioma da pagina nao e reconhecido', async () => {
+    montarPagina('en', 'changelog');
+    document.body.dataset['locale'] = 'fr';
+
+    const { mountSite } = await import('../src/main.js');
+    const app = mountSite({ reducedMotion: true });
+    expect(app.locale).toBe('en');
+    app.destroy();
   });
 });

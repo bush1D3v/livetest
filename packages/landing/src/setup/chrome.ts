@@ -1,9 +1,14 @@
 /**
- * Cromo da pagina: header fixo, barra de progresso, brilho do cursor e
- * destaque da secao atual na navegacao.
+ * Cromo da pagina: cabecalho fixo, barra de progresso, brilho do cursor e
+ * destaque da secao atual no indice da direita.
  *
- * Todos os efeitos escrevem apenas em variaveis CSS e classes — nenhum deles
- * mede layout durante a rolagem.
+ * Todos os efeitos escrevem apenas em variaveis CSS e classes; nenhum deles mede
+ * layout durante a rolagem.
+ *
+ * O indice da direita e a unica navegacao por ancora que sobrou no site: o
+ * cabecalho leva a outras paginas, e nao a blocos da mesma. Acompanhar a secao
+ * atual continua valendo ali, porque uma pagina de referencia longa e
+ * exatamente onde alguem se perde.
  *
  * @packageDocumentation
  */
@@ -51,7 +56,7 @@ export function scrollProgress(
 }
 
 /**
- * Escolhe qual link da navegacao deve aparecer como atual.
+ * Escolhe qual link do indice deve aparecer como atual.
  *
  * @param secoes - Secoes com o topo relativo ao documento.
  * @param scrollTop - Deslocamento atual, ja somado a margem do header.
@@ -83,7 +88,7 @@ export function setupChrome(options: ChromeOptions = {}): Chrome {
   const header = doc.querySelector<HTMLElement>('[data-header]');
   const barra = doc.querySelector<HTMLElement>('[data-scroll-progress]');
   const brilho = doc.querySelector<HTMLElement>('[data-cursor-glow]');
-  const links = [...doc.querySelectorAll<HTMLAnchorElement>('.site-nav a')];
+  const links = [...doc.querySelectorAll<HTMLAnchorElement>('.indice a')];
 
   const secoes = links
     .map((link) => {
@@ -135,8 +140,8 @@ export function setupChrome(options: ChromeOptions = {}): Chrome {
     win.addEventListener('mousemove', aoMoverCursor, { passive: true });
   }
 
-  // Halo que acompanha o cursor dentro de cada cartao de recurso.
-  const cartoes = [...doc.querySelectorAll<HTMLElement>('.feature')];
+  // Halo que acompanha o cursor dentro de cada cartao da home.
+  const cartoes = [...doc.querySelectorAll<HTMLElement>('.cartao')];
   const aoMoverNoCartao = (evento: MouseEvent): void => {
     const cartao = evento.currentTarget as HTMLElement;
     const caixa = cartao.getBoundingClientRect();

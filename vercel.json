@@ -5,7 +5,7 @@
   "installCommand": "npm install",
   "framework": null,
   "cleanUrls": true,
-  "trailingSlash": false,
+  "trailingSlash": true,
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "source": "/(robots.txt|sitemap.xml)",
+      "source": "/(robots.txt|sitemap.xml|search-en.json|search-pt.json)",
       "headers": [
         {
           "key": "Cache-Control",

@@ -97,7 +97,7 @@ createEngine({
 });
 ```
 
-Ver [docs/adapters.md](https://github.com/bush1D3v/livetest/blob/master/docs/adapters.md).
+Ver [Escrevendo um adapter](https://livetest.vercel.app/guide/adapters/).
 
 ### `loadConfig(options): Promise<LoadConfigResult>`
 
@@ -159,7 +159,7 @@ if (discovery.status === 'running') {
 }
 ```
 
-Protocolo em [docs/protocol.md](https://github.com/bush1D3v/livetest/blob/master/docs/protocol.md).
+Protocolo em [Event protocol](https://livetest.vercel.app/reference/protocol/).
 
 ## Erros
 

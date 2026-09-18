@@ -44,16 +44,26 @@ export interface Reveal {
   disconnect(): void;
 }
 
-/** Fabrica padrao, apoiada no `IntersectionObserver` do navegador. */
-export const intersectionFactory: RevealObserverFactory | undefined =
-  typeof globalThis.IntersectionObserver === 'function'
-    ? (callback) =>
-        new globalThis.IntersectionObserver(
-          (entries) =>
-            callback(entries.map((entry) => ({ target: entry.target, isIntersecting: entry.isIntersecting }))),
-          { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
-        )
-    : undefined;
+/**
+ * Fabrica padrao, apoiada no `IntersectionObserver` do navegador.
+ *
+ * A checagem de disponibilidade fica em {@link observadorPadrao}, e nao aqui:
+ * decidida no momento do import, ela congelaria a resposta antes de um
+ * eventual polyfill carregar, e nao haveria como testar as duas respostas.
+ */
+export const intersectionFactory: RevealObserverFactory = (callback) =>
+  new globalThis.IntersectionObserver(
+    (entries) =>
+      callback(
+        entries.map((entry) => ({ target: entry.target, isIntersecting: entry.isIntersecting })),
+      ),
+    { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
+  );
+
+/** A fabrica padrao, ou `undefined` onde o navegador nao oferece o observador. */
+export function observadorPadrao(): RevealObserverFactory | undefined {
+  return typeof globalThis.IntersectionObserver === 'function' ? intersectionFactory : undefined;
+}
 
 /**
  * Liga a revelacao por rolagem.
@@ -67,7 +77,7 @@ export function setupReveal(options: RevealOptions = {}): Reveal {
   const root = options.root ?? document;
   const selector = options.selector ?? '[data-reveal]';
   const revealedClass = options.revealedClass ?? 'is-revealed';
-  const factory = options.factory ?? intersectionFactory;
+  const factory = options.factory ?? observadorPadrao();
 
   const elementos = [...root.querySelectorAll(selector)];
 

@@ -1,52 +1,109 @@
 /*
  * Fundacoes: tokens, reset e tipografia.
  *
- * A paleta e escura por escolha, nao por moda: a pagina imita a superficie onde
- * a ferramenta vive — terminal e editor. Verde e vermelho ficam reservados ao
- * significado que tem no produto (passou / falhou) e nunca aparecem como
- * enfeite.
+ * Os dois temas sao dois conjuntos de valores para as mesmas variaveis, e o
+ * resto da folha nunca menciona uma cor literal. Trocar de tema e trocar um
+ * atributo no `<html>`, o que o script embutido no `<head>` faz antes da
+ * primeira pintura, para a pagina nao piscar no tema errado.
+ *
+ * Verde e vermelho ficam reservados ao significado que tem no produto (passou e
+ * falhou) e nunca aparecem como enfeite.
+ *
+ * Blocos de codigo e o terminal mantem superficie escura nos dois temas: o
+ * realce de sintaxe foi ajustado para fundo escuro, e uma segunda paleta so para
+ * o tema claro seria mais uma coisa para manter em sincronia sem ganho real.
  */
 
 :root {
-  /* Superficies, do mais fundo ao mais proximo. */
-  --bg: #07090f;
-  --bg-soft: #0b0e17;
-  --surface: #10141f;
-  --surface-2: #151a28;
-  --line: #1e2434;
-  --line-strong: #2a3145;
-
-  /* Texto. */
-  --text: #e8ecf5;
-  --text-muted: #949db4;
-  --text-faint: #67708a;
-
-  /* Acentos da marca. */
-  --accent: #22d3ee;
-  --accent-2: #a78bfa;
-  --accent-soft: rgba(34, 211, 238, 0.12);
-  --gradient: linear-gradient(115deg, #22d3ee 0%, #7dd3fc 35%, #a78bfa 100%);
-
-  /* Semantica de teste — o vocabulario do produto. */
-  --pass: #4ade80;
-  --fail: #fb7185;
-  --warn: #fbbf24;
-  --idle: #4b5468;
-
   /* Tipografia. */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 
   /* Ritmo. */
-  --radius: 14px;
-  --radius-sm: 9px;
-  --radius-lg: 22px;
-  --gutter: clamp(1.25rem, 4vw, 3.5rem);
-  --max: 1180px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+  --gutter: clamp(1.15rem, 3.5vw, 2.5rem);
+  --max: 1420px;
+  --topo-altura: 60px;
+  --lateral-largura: 250px;
+  --indice-largura: 228px;
 
   /* Movimento. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur: 0.5s;
+  --dur: 0.45s;
+
+  /* Superficie de codigo, igual nos dois temas. */
+  --code-bg: #0b0e17;
+  --code-line: #1c2334;
+  --code-text: #dbe3f2;
+}
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #07090f;
+  --bg-soft: #0b0e17;
+  --surface: #10141f;
+  --surface-2: #151a28;
+  --surface-3: #1a2031;
+  --line: #1e2434;
+  --line-strong: #2a3145;
+
+  --text: #e8ecf5;
+  --text-muted: #949db4;
+  --text-faint: #67708a;
+
+  --accent: #22d3ee;
+  --accent-2: #a78bfa;
+  --accent-contraste: #04222b;
+  --accent-soft: rgba(34, 211, 238, 0.12);
+  --gradient: linear-gradient(115deg, #22d3ee 0%, #7dd3fc 35%, #a78bfa 100%);
+
+  --pass: #4ade80;
+  --fail: #fb7185;
+  --warn: #fbbf24;
+  --idle: #4b5468;
+
+  --sombra: 0 18px 50px -24px rgba(0, 0, 0, 0.85);
+  --marca-grade: rgba(148, 163, 184, 0.055);
+  --aurora-a: rgba(34, 211, 238, 0.4);
+  --aurora-b: rgba(167, 139, 250, 0.36);
+  --aurora-forca: 0.5;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-soft: #f7f8fb;
+  --surface: #ffffff;
+  --surface-2: #f3f5f9;
+  --surface-3: #e9edf4;
+  --line: #e2e6ef;
+  --line-strong: #c9d0de;
+
+  --text: #161b26;
+  --text-muted: #5a6478;
+  --text-faint: #7e8899;
+
+  --accent: #0b7f96;
+  --accent-2: #6d3bd6;
+  --accent-contraste: #ffffff;
+  --accent-soft: rgba(11, 127, 150, 0.1);
+  --gradient: linear-gradient(115deg, #0b7f96 0%, #2a7fb8 40%, #6d3bd6 100%);
+
+  --pass: #15803d;
+  --fail: #be123c;
+  --warn: #b45309;
+  --idle: #99a1b3;
+
+  --sombra: 0 16px 44px -28px rgba(20, 30, 60, 0.45);
+  --marca-grade: rgba(30, 41, 59, 0.045);
+  --aurora-a: rgba(34, 211, 238, 0.22);
+  --aurora-b: rgba(167, 139, 250, 0.2);
+  --aurora-forca: 0.55;
 }
 
 *,
@@ -61,8 +118,8 @@
 
 html {
   scroll-behavior: smooth;
-  /* O header fixo nao pode cobrir o titulo da secao ancorada. */
-  scroll-padding-top: 6rem;
+  /* O cabecalho fixo nao pode cobrir o titulo da secao ancorada. */
+  scroll-padding-top: calc(var(--topo-altura) + 1.25rem);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -72,7 +129,7 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
-  line-height: 1.65;
+  line-height: 1.7;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -83,8 +140,8 @@ h1,
 h2,
 h3,
 h4 {
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
   font-weight: 700;
   text-wrap: balance;
 }
@@ -98,44 +155,61 @@ a {
   text-decoration: none;
 }
 
-code,
-pre {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
-  font-variant-ligatures: none;
-}
-
-:is(p, li) > code {
-  padding: 0.1em 0.4em;
-  border-radius: 5px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  color: #b7e6f5;
-  font-size: 0.85em;
-  white-space: nowrap;
-}
-
 button {
   font: inherit;
   color: inherit;
-  cursor: pointer;
-  border: none;
   background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
+input {
+  font: inherit;
+  color: inherit;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+img,
 svg {
   display: block;
-}
-
-::selection {
-  background: rgba(34, 211, 238, 0.28);
-  color: #fff;
+  max-width: 100%;
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline-offset: 2px;
   border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Link que leva direto ao conteudo, visivel so ao receber o foco. */
+.pular {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 200;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-contraste);
+  font-weight: 600;
+  transform: translateY(-160%);
+  transition: transform 0.2s var(--ease);
+}
+
+.pular:focus-visible {
+  transform: none;
 }
 
 .visually-hidden {
@@ -144,47 +218,7 @@ svg {
   height: 1px;
   padding: 0;
   overflow: hidden;
-  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-.skip-link {
-  position: absolute;
-  top: -100px;
-  left: 1rem;
-  z-index: 100;
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #04121a;
-  font-weight: 600;
-  transition: top 0.2s var(--ease);
-}
-
-.skip-link:focus {
-  top: 1rem;
-}
-
-.gradient-text {
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.strike {
-  position: relative;
-  color: var(--text-muted);
-}
-
-.strike::after {
-  content: '';
-  position: absolute;
-  inset: 52% -0.15em auto -0.15em;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--fail);
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: strike-in 0.7s 0.4s var(--ease) forwards;
+  border: 0;
 }

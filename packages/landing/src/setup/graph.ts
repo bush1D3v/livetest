@@ -16,6 +16,7 @@ import {
   type Graph,
 } from '../modules/depth-graph.js';
 import { highlight } from '../modules/highlight.js';
+import type { Locale } from '../modules/i18n.js';
 
 /** Arquivo que o visitante "salva" na demonstracao. */
 const ARQUIVO_ALTERADO = 'src/login.ts';
@@ -47,11 +48,19 @@ export function configFor(depth: Depth): string {
   ].join('\n');
 }
 
+/** Como a legenda fecha a frase, em cada idioma. */
+const FECHO: Readonly<Record<Locale, (total: number) => string>> = {
+  en: (total) =>
+    `Saving <strong>login.ts</strong> runs <strong>${total} test ${total === 1 ? 'file' : 'files'}</strong>.`,
+  pt: (total) =>
+    `Salvar <strong>login.ts</strong> roda <strong>${total} ${
+      total === 1 ? 'arquivo de teste' : 'arquivos de teste'
+    }</strong>.`,
+};
+
 /** Legenda que resume o resultado. */
-export function captionFor(depth: Depth, total: number): string {
-  const { descricao } = DEPTH_LABELS[depth];
-  const plural = total === 1 ? 'arquivo de teste' : 'arquivos de teste';
-  return `${descricao} Salvar <strong>login.ts</strong> roda <strong>${total} ${plural}</strong>.`;
+export function captionFor(depth: Depth, total: number, locale: Locale = 'pt'): string {
+  return `${DEPTH_LABELS[locale][depth].descricao} ${FECHO[locale](total)}`;
 }
 
 /** Opcoes de {@link setupGraph}. */
@@ -60,6 +69,8 @@ export interface GraphOptions {
   graph?: Graph;
   /** Profundidade inicial. @defaultValue `'direct'` */
   initial?: Depth;
+  /** Idioma das frases de explicacao. @defaultValue `'pt'` */
+  locale?: Locale;
 }
 
 /** Grafo montado. */
@@ -84,6 +95,7 @@ export interface GraphDemo {
 export function setupGraph(options: GraphOptions = {}): GraphDemo {
   const root = options.root ?? document;
   const graph = options.graph ?? DEMO_GRAPH;
+  const locale = options.locale ?? 'pt';
 
   const caixaNos = root.querySelector<HTMLElement>('[data-graph-nodes]');
   const caixaArestas = root.querySelector<SVGGElement>('[data-graph-edges]');
@@ -177,7 +189,7 @@ export function setupGraph(options: GraphOptions = {}): GraphDemo {
       linha.classList.toggle('is-active', ativas.has(chave));
     }
 
-    alvoLegenda.innerHTML = captionFor(depth, impacto.tests.length);
+    alvoLegenda.innerHTML = captionFor(depth, impacto.tests.length, locale);
 
     alvoTestes.innerHTML = impacto.tests
       .map((teste) => {
@@ -185,7 +197,7 @@ export function setupGraph(options: GraphOptions = {}): GraphDemo {
         return [
           '<li>',
           `<span class="graph-demo__test-name">${nome}</span>`,
-          `<span class="graph-demo__test-why">${explainTest(teste)}</span>`,
+          `<span class="graph-demo__test-why">${explainTest(teste, locale)}</span>`,
           '</li>',
         ].join('');
       })

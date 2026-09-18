@@ -37,9 +37,16 @@ Primeira versão. Implementa o MVP descrito em
 - Códigos de saída estáveis, documentados, adequados a CI.
 - `runCli` embutível, que devolve o código em vez de chamar `process.exit`.
 
-**Landing page (`@livetest/landing`)**
+**Site (`@livetest/landing`)**
 
-- Site estático em Vite, sem dependências em runtime: ~26 kB de CSS e ~20 kB de JS.
+- Site estático em Vite, sem dependências em runtime: ~31 kB de CSS e ~27 kB de JS.
+- Documentação completa em português e inglês, 14 páginas por idioma, geradas no build a
+  partir do Markdown em `content/` e de uma única tabela de rotas.
+- Busca em todo o site, com índice gerado no build e consultado no navegador: sem
+  servidor, sem requisição por tecla, com correção de um erro de digitação e expansão de
+  prefixo por busca binária.
+- Seletor de idioma e de tema (claro, escuro, sistema), ambos decididos antes da primeira
+  pintura por script embutido no `<head>`.
 - Terminal animado na abertura, encenando um daemon real — inclusive a regressão que
   só aparece nos importadores.
 - Seção central interativa: o visitante escolhe a profundidade e o grafo recalcula os

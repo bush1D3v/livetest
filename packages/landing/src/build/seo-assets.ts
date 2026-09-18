@@ -8,6 +8,9 @@
  * @packageDocumentation
  */
 
+import { LOCALES } from '../modules/i18n.js';
+import { rotaCompleta } from './layout.js';
+import { PAGINAS_DOC } from './routes.js';
 import { absoluto } from './site-url.js';
 
 /** Uma pagina no sitemap. */
@@ -20,10 +23,22 @@ export interface PaginaDoSitemap {
   frequencia: 'daily' | 'weekly' | 'monthly' | 'yearly';
 }
 
-/** A landing e uma pagina so; a lista existe para o dia em que nao for. */
-export const PAGINAS: readonly PaginaDoSitemap[] = [
-  { caminho: '/', prioridade: 1, frequencia: 'weekly' },
-];
+/**
+ * Todas as paginas publicadas, nos dois idiomas.
+ *
+ * Deriva de `PAGINAS_DOC`, e nao de uma lista propria, para que acrescentar uma
+ * pagina de documentacao nao exija lembrar de inscreve-la tambem aqui. Uma
+ * pagina que existe mas nao aparece no sitemap demora semanas para ser indexada,
+ * e nada no build acusaria a falta.
+ */
+export const PAGINAS: readonly PaginaDoSitemap[] = LOCALES.flatMap((locale) => [
+  { caminho: `/${rotaCompleta(locale, '')}`, prioridade: locale === 'en' ? 1 : 0.9, frequencia: 'weekly' as const },
+  ...PAGINAS_DOC.map((pagina) => ({
+    caminho: `/${rotaCompleta(locale, pagina.rota)}/`,
+    prioridade: locale === 'en' ? pagina.prioridade : Math.round((pagina.prioridade - 0.1) * 10) / 10,
+    frequencia: 'monthly' as const,
+  })),
+]);
 
 /**
  * Monta o `robots.txt`.

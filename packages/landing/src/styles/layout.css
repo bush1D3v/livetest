@@ -1,0 +1,476 @@
+/*
+ * A moldura: cabecalho, menu lateral, indice da direita, grade da pagina e
+ * rodape.
+ *
+ * A grade da documentacao tem tres colunas e duas delas desaparecem conforme a
+ * tela encolhe: primeiro o indice da direita, que e conveniencia, depois o menu
+ * lateral, que vira gaveta. O texto nunca e a coluna sacrificada.
+ */
+
+/* ---------------------------------------------------------------- cabecalho */
+
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 0.25s var(--ease),
+    background 0.25s var(--ease);
+}
+
+.topo.is-stuck {
+  border-bottom-color: var(--line);
+}
+
+.topo__faixa {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: var(--topo-altura);
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.topo__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.02rem;
+}
+
+.topo__marca-icone svg {
+  width: 21px;
+  height: 21px;
+  color: var(--accent);
+}
+
+.topo__versao {
+  padding: 0.1rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  transition:
+    color 0.2s var(--ease),
+    border-color 0.2s var(--ease);
+}
+
+.topo__versao:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.topo__links {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  margin-left: 1.6rem;
+  font-size: 0.895rem;
+  font-weight: 500;
+}
+
+.topo__links a {
+  color: var(--text-muted);
+  padding: 0.35rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.18s var(--ease);
+}
+
+.topo__links a:hover {
+  color: var(--text);
+}
+
+.topo__links a[data-ativo] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.topo__acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+/*
+ * O botao da gaveta so existe no celular. A regra qualifica com o cabecalho de
+ * proposito: `.icone-botao` da `display: inline-flex` a todo botao de icone, e
+ * com a mesma especificidade quem vence e quem vem depois na folha. Contar com
+ * a ordem dos arquivos deixaria o botao aparecendo no desktop se alguem
+ * trocasse dois `@import` de lugar.
+ */
+.topo .topo__menu {
+  display: none;
+}
+
+/* ------------------------------------------------------------------- grade */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--lateral-largura) minmax(0, 1fr) var(--indice-largura);
+  gap: 0 2.5rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  align-items: start;
+}
+
+/* --------------------------------------------------------------- lateral */
+
+/*
+ * Na home o menu existe so como gaveta: nao ha coluna lateral para ele ocupar.
+ * A regra do celular, mais abaixo, o traz de volta nas duas paginas.
+ */
+body[data-pagina='home'] .lateral {
+  display: none;
+}
+
+/* O grupo que repete os links do cabecalho so serve quando eles somem. */
+.lateral__grupo--movel {
+  display: none;
+}
+
+.lateral {
+  position: sticky;
+  top: var(--topo-altura);
+  max-height: calc(100vh - var(--topo-altura));
+  overflow-y: auto;
+  padding: 2rem 0 4rem;
+  overscroll-behavior: contain;
+}
+
+.lateral__grupo + .lateral__grupo {
+  margin-top: 1.6rem;
+}
+
+.lateral__titulo {
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+  margin-bottom: 0.5rem;
+}
+
+.lateral ul {
+  list-style: none;
+  padding: 0;
+  border-left: 1px solid var(--line);
+}
+
+.lateral li a {
+  display: block;
+  padding: 0.32rem 0 0.32rem 0.85rem;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  transition:
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease);
+}
+
+.lateral li a:hover {
+  color: var(--text);
+}
+
+.lateral li a[aria-current='page'] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ texto */
+
+.doc {
+  min-width: 0;
+  padding: 2.2rem 0 4rem;
+}
+
+.doc__texto {
+  max-width: 46rem;
+}
+
+/* ------------------------------------------------------------- indice dir. */
+
+.indice {
+  position: sticky;
+  top: var(--topo-altura);
+  max-height: calc(100vh - var(--topo-altura));
+  overflow-y: auto;
+  padding: 2.2rem 0 4rem;
+}
+
+.indice__titulo {
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+  margin-bottom: 0.55rem;
+}
+
+.indice ul {
+  list-style: none;
+  padding: 0;
+  border-left: 1px solid var(--line);
+}
+
+.indice li a {
+  display: block;
+  padding: 0.24rem 0 0.24rem 0.8rem;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  transition:
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease);
+}
+
+.indice li.indice__n3 a {
+  padding-left: 1.6rem;
+  font-size: 0.8rem;
+}
+
+.indice li a:hover {
+  color: var(--text);
+}
+
+.indice li a.is-current {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+/* ---------------------------------------------------- anterior e proxima */
+
+.passos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 46rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+
+.passo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition:
+    border-color 0.2s var(--ease),
+    transform 0.2s var(--ease);
+}
+
+.passo:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.passo--proxima {
+  text-align: right;
+}
+
+.passo__rotulo {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.passo__nome {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ----------------------------------------------------------------- rodape */
+
+.rodape {
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+  margin-top: 2rem;
+}
+
+.rodape__interno {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 2.4fr;
+  gap: 2.5rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 3rem var(--gutter) 2rem;
+}
+
+.rodape__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.rodape__marca svg {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+
+.rodape__nome {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.rodape__versao {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.rodape__links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.8rem;
+}
+
+.rodape__links h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+  margin-bottom: 0.6rem;
+}
+
+.rodape__links a {
+  display: block;
+  padding: 0.18rem 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  transition: color 0.16s var(--ease);
+}
+
+.rodape__links a:hover {
+  color: var(--accent);
+}
+
+.rodape__legal {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.2rem var(--gutter) 2.5rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------- respostas */
+
+@media (max-width: 1220px) {
+  .layout {
+    grid-template-columns: var(--lateral-largura) minmax(0, 1fr);
+    gap: 0 2rem;
+  }
+
+  .indice {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .topo__links {
+    display: none;
+  }
+
+  .topo .topo__menu {
+    display: inline-flex;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lateral__grupo--movel {
+    display: block;
+  }
+
+  /*
+   * Na home a gaveta volta a existir. O seletor precisa da mesma forca do que a
+   * escondeu la em cima, e por isso repete `body[data-pagina='home']`, mas so
+   * para `display`: se ele carregasse tambem o `transform` de baixo, passaria a
+   * vencer `.lateral.is-open`, que tem uma classe a menos, e a gaveta ficaria
+   * presa fora da tela mesmo aberta.
+   */
+  body[data-pagina='home'] .lateral {
+    display: block;
+  }
+
+  .lateral {
+    display: block;
+    position: fixed;
+    top: var(--topo-altura);
+    bottom: 0;
+    left: 0;
+    z-index: 45;
+    width: min(82vw, 300px);
+    max-height: none;
+    padding: 1.5rem 1.4rem 3rem;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    transform: translateX(-102%);
+    transition: transform 0.28s var(--ease);
+  }
+
+  .lateral.is-open {
+    transform: none;
+  }
+
+  .rodape__interno {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .passos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topo__versao {
+    display: none;
+  }
+
+  /*
+   * Em telas estreitas a faixa nao comporta tudo, e o botao de instalar e o
+   * que menos pode faltar. O link do GitHub sai daqui e continua no rodape,
+   * que toda pagina tem; o seletor de idioma e o de tema ficam, porque nao
+   * existem em outro lugar.
+   */
+  .topo__acoes > a.icone-botao {
+    display: none;
+  }
+}
+
+/* Cortina que escurece a pagina quando a gaveta abre. */
+.cortina {
+  position: fixed;
+  inset: var(--topo-altura) 0 0 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+
+.cortina.is-open {
+  opacity: 1;
+}

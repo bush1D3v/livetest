@@ -1,3 +1,10 @@
+/**
+ * Os modulos de apoio sem DOM: movimento e laco de quadros.
+ *
+ * Rodam no ambiente `node`, sem jsdom, e por isso levam milissegundos. E o que
+ * justifica a separacao entre `modules/` e `setup/`.
+ */
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,7 +13,6 @@ import {
   startFrameLoop,
   type FrameScheduler,
 } from '../src/modules/motion.js';
-import { createTabGroup } from '../src/modules/tabs.js';
 
 /** Agendador controlado: os quadros disparam quando o teste manda. */
 function agendadorManual() {
@@ -121,61 +127,6 @@ describe('startFrameLoop', () => {
       globalThis.requestAnimationFrame = original.raf;
       globalThis.cancelAnimationFrame = original.caf;
     }
-  });
-});
-
-describe('createTabGroup', () => {
-  it('comeca na primeira aba', () => {
-    expect(createTabGroup(['a', 'b']).active()).toBe('a');
-  });
-
-  it('respeita a aba inicial informada', () => {
-    expect(createTabGroup(['a', 'b'], { initial: 'b' }).active()).toBe('b');
-  });
-
-  it('ignora aba inicial desconhecida', () => {
-    expect(createTabGroup(['a', 'b'], { initial: 'z' }).active()).toBe('a');
-  });
-
-  it('seleciona e notifica a mudanca', () => {
-    const onChange = vi.fn();
-    const grupo = createTabGroup(['a', 'b'], { onChange });
-    expect(grupo.select('b')).toBe(true);
-    expect(onChange).toHaveBeenCalledWith('b', 'a');
-  });
-
-  it('nao notifica ao reselecionar a mesma aba', () => {
-    const onChange = vi.fn();
-    const grupo = createTabGroup(['a', 'b'], { onChange });
-    expect(grupo.select('a')).toBe(true);
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('recusa aba desconhecida', () => {
-    const grupo = createTabGroup(['a', 'b']);
-    expect(grupo.select('z')).toBe(false);
-    expect(grupo.active()).toBe('a');
-  });
-
-  it('circula com next e previous', () => {
-    const grupo = createTabGroup(['a', 'b', 'c']);
-    expect(grupo.next()).toBe('b');
-    expect(grupo.next()).toBe('c');
-    expect(grupo.next()).toBe('a');
-    expect(grupo.previous()).toBe('c');
-  });
-
-  it('funciona sem callback de mudanca', () => {
-    const grupo = createTabGroup(['a', 'b']);
-    expect(() => grupo.select('b')).not.toThrow();
-  });
-
-  it('expoe os ids na ordem declarada', () => {
-    expect(createTabGroup(['x', 'y']).ids).toEqual(['x', 'y']);
-  });
-
-  it('rejeita grupo vazio', () => {
-    expect(() => createTabGroup([])).toThrow(/ao menos uma aba/);
   });
 });
 

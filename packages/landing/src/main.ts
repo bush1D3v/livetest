@@ -1,89 +1,119 @@
 /**
- * Ponto de entrada da landing.
+ * Ponto de entrada do site.
  *
- * Só fiação: cada comportamento vive em `src/setup/`, e a lógica que dá para
- * testar sem DOM vive em `src/modules/`. Aqui se decide apenas *se* animar —
- * a resposta depende do que o visitante pediu no sistema operacional.
+ * So fiacao. Cada comportamento vive em `src/setup/`, e a logica que da para
+ * testar sem DOM vive em `src/modules/`. Aqui se decide o que montar e se
+ * animar: a home tem terminal e cartoes, as paginas de documentacao tem gaveta
+ * e indice, e o grafo interativo aparece so onde alguem o escreveu no Markdown.
+ * Montar o que nao existe seria barato, mas procurar por ele em toda pagina nao
+ * e de graca, e o resultado seria um bundle que finge ter mais trabalho do que
+ * tem.
+ *
+ * O idioma e o tema ja foram resolvidos antes desta linha, por dois scripts
+ * embutidos no `<head>`. O que roda aqui apenas continua a partir do que eles
+ * decidiram.
  *
  * @packageDocumentation
  */
 
 import './styles/index.css';
 
+import { isLocale, type Locale } from './modules/i18n.js';
 import { prefersReducedMotion } from './modules/motion.js';
 import { setupReveal } from './modules/reveal.js';
 import { setupChrome } from './setup/chrome.js';
-import { setupCodeBlocks } from './setup/code.js';
 import { setupCopyButtons } from './setup/copy.js';
 import { setupGraph } from './setup/graph.js';
+import { setupNav } from './setup/nav.js';
+import { setupPrefs } from './setup/prefs.js';
+import { setupSearch } from './setup/search.js';
 import { setupTerminal } from './setup/terminal.js';
 
-/** Tudo o que a página montou, devolvido para inspeção em teste. */
+/** Tudo o que a pagina montou, devolvido para inspecao em teste. */
 export interface LandingApp {
   reveal: ReturnType<typeof setupReveal>;
   chrome: ReturnType<typeof setupChrome>;
-  terminal: ReturnType<typeof setupTerminal>;
-  graph: ReturnType<typeof setupGraph>;
-  code: ReturnType<typeof setupCodeBlocks>;
+  prefs: ReturnType<typeof setupPrefs>;
+  nav: ReturnType<typeof setupNav>;
+  search: ReturnType<typeof setupSearch>;
   copy: ReturnType<typeof setupCopyButtons>;
-  /** `true` quando a página foi montada em modo estático. */
+  /** Montado so na home. */
+  terminal: ReturnType<typeof setupTerminal> | null;
+  /** Montado so onde existe a demonstracao do grafo. */
+  graph: ReturnType<typeof setupGraph> | null;
+  /** Idioma da pagina. */
+  readonly locale: Locale;
+  /** `true` quando a pagina foi montada em modo estatico. */
   readonly reducedMotion: boolean;
   /** Desliga tudo o que consome quadros ou escuta eventos. */
   destroy(): void;
 }
 
-/** Opções de {@link mountLanding}. */
+/** Opcoes de {@link mountSite}. */
 export interface MountOptions {
   /** Documento usado. @defaultValue `document` */
   doc?: Document;
   /**
-   * Força o modo estático. Quando omitido, consulta
-   * `prefers-reduced-motion` no sistema do visitante.
+   * Forca o modo estatico. Quando omitido, consulta `prefers-reduced-motion` no
+   * sistema do visitante.
    */
   reducedMotion?: boolean;
 }
 
 /**
- * Monta a página inteira.
+ * Monta a pagina inteira.
  *
  * @example
  * ```ts
- * const app = mountLanding();
- * app.graph.select('transitive');
+ * const app = mountSite();
+ * app.graph?.select('transitive');
  * app.destroy();
  * ```
  */
-export function mountLanding(options: MountOptions = {}): LandingApp {
+export function mountSite(options: MountOptions = {}): LandingApp {
   const doc = options.doc ?? document;
   const estatico = options.reducedMotion ?? prefersReducedMotion();
 
+  const bruto = doc.body.dataset['locale'];
+  const locale: Locale = isLocale(bruto) ? bruto : 'en';
+  const home = doc.body.dataset['pagina'] === 'home';
+
   const reveal = setupReveal({ root: doc, immediate: estatico });
   const chrome = setupChrome({ doc, disableCursorGlow: estatico });
-  const terminal = setupTerminal({ root: doc, immediate: estatico });
-  const graph = setupGraph({ root: doc });
-  const code = setupCodeBlocks({ root: doc });
-  const copy = setupCopyButtons({ root: doc });
+  const prefs = setupPrefs({ doc });
+  const nav = setupNav({ doc });
+  const search = setupSearch({ doc });
+  const copy = setupCopyButtons({ root: doc, locale });
+
+  const terminal = home ? setupTerminal({ root: doc, immediate: estatico, locale }) : null;
+  const graph = doc.querySelector('[data-graph-nodes]') ? setupGraph({ root: doc, locale }) : null;
 
   return {
     reveal,
     chrome,
+    prefs,
+    nav,
+    search,
+    copy,
     terminal,
     graph,
-    code,
-    copy,
+    locale,
     reducedMotion: estatico,
     destroy(): void {
       reveal.disconnect();
       chrome.destroy();
-      terminal.stop();
+      prefs.destroy();
+      nav.destroy();
+      search.destroy();
+      terminal?.stop();
     },
   };
 }
 
-// O `index.html` carrega este módulo com `type="module"`, que já é adiado até
-// o documento estar montado — não é preciso esperar `DOMContentLoaded`.
-/* c8 ignore start -- só executa no navegador, nunca sob o runner de teste */
-if (typeof document !== 'undefined' && document.querySelector('[data-terminal-output]')) {
-  mountLanding();
+// O HTML carrega este modulo com `type="module"`, que ja e adiado ate o
+// documento estar montado: nao e preciso esperar `DOMContentLoaded`.
+/* c8 ignore start -- so executa no navegador, nunca sob o runner de teste */
+if (typeof document !== 'undefined' && document.body?.dataset['pagina'] !== undefined) {
+  mountSite();
 }
 /* c8 ignore stop */

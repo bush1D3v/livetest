@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  PAGINAS,
-  buildRobots,
-  buildSitemap,
-  dataDoSitemap,
-} from '../src/build/seo-assets.js';
+import { PAGINAS, buildRobots, buildSitemap, dataDoSitemap } from '../src/build/seo-assets.js';
+import { PAGINAS_DOC } from '../src/build/routes.js';
+import { LOCALES } from '../src/modules/i18n.js';
 import { SITE_URL_PADRAO, absoluto, resolveSiteUrl } from '../src/build/site-url.js';
 
 describe('resolveSiteUrl', () => {
@@ -77,7 +74,7 @@ describe('buildRobots', () => {
 });
 
 describe('buildSitemap', () => {
-  it('lista a home por padrao', () => {
+  it('lista a home do ingles na raiz', () => {
     const xml = buildSitemap('https://livetest.dev', '2026-08-25');
 
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
@@ -99,9 +96,36 @@ describe('buildSitemap', () => {
     expect(xml).toContain('<priority>0.5</priority>');
   });
 
-  it('a lista padrao cobre a landing inteira', () => {
-    expect(PAGINAS).toHaveLength(1);
-    expect(PAGINAS[0]?.caminho).toBe('/');
+  it('a lista padrao cobre as duas home e toda a documentacao', () => {
+    const caminhos = PAGINAS.map((pagina) => pagina.caminho);
+
+    expect(caminhos).toHaveLength((PAGINAS_DOC.length + 1) * LOCALES.length);
+    expect(caminhos).toContain('/');
+    expect(caminhos).toContain('/pt');
+    expect(caminhos).toContain('/guide/depth/');
+    expect(caminhos).toContain('/pt/reference/config/');
+  });
+
+  it('nao repete caminho nenhum', () => {
+    const caminhos = PAGINAS.map((pagina) => pagina.caminho);
+    expect(new Set(caminhos).size).toBe(caminhos.length);
+  });
+
+  it('deixa o ingles um degrau acima do portugues', () => {
+    const ingles = PAGINAS.find((pagina) => pagina.caminho === '/guide/depth/');
+    const portugues = PAGINAS.find((pagina) => pagina.caminho === '/pt/guide/depth/');
+    expect(ingles?.prioridade).toBeGreaterThan(portugues?.prioridade as number);
+  });
+
+  it('a home e a pagina de maior prioridade', () => {
+    const home = PAGINAS.find((pagina) => pagina.caminho === '/');
+    expect(home?.prioridade).toBe(1);
+    for (const pagina of PAGINAS) expect(pagina.prioridade).toBeLessThanOrEqual(1);
+  });
+
+  it('emite no sitemap uma entrada por pagina publicada', () => {
+    const xml = buildSitemap('https://livetest.dev', '2026-08-25');
+    expect(xml.match(/<url>/g)).toHaveLength(PAGINAS.length);
   });
 });
 

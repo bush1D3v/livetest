@@ -85,7 +85,7 @@ Requer Node.js 18.18+. Para projetos Python, um interpretador 3.8+ no `PATH`.
 
 Cada etapa é um módulo isolado e testado. Grafo de dependência e test runner são
 **adapters plugáveis**: adicionar Go ou Rust não exige tocar no core — veja
-[docs/adapters.md](docs/adapters.md).
+[Escrevendo um adapter](https://livetest.vercel.app/pt/guide/adapters/).
 
 ## Profundidade de propagação
 
@@ -168,7 +168,7 @@ algum teste falha — direto em `&&` de shell ou em hook de pre-commit:
 npx livetest run src/login.ts && echo "seguro para continuar"
 ```
 
-Guia detalhado: [docs/ai-agents.md](docs/ai-agents.md).
+Guia detalhado: [Agentes de IA](https://livetest.vercel.app/pt/guide/ai-agents/).
 
 ## Extensão do VSCode
 
@@ -199,29 +199,41 @@ abre um terminal com o comando — a ação continua sendo sua.
 |---|---|---|
 | **JavaScript / TypeScript** | API do compilador TS (`paths`, `baseUrl`, `index`, ESM `.js`→`.ts`) | Vitest, Jest |
 | **Python** | módulo `ast` nativo, com fallback por regex | pytest |
-| **Qualquer outra** | adapter próprio ([docs/adapters.md](docs/adapters.md)) | adapter `command` (exit code) |
-
-## Landing page
-
-O site de apresentação vive em [packages/landing/](packages/landing/). É estático,
-construído com Vite e **sem nenhuma dependência em runtime** — a seção central roda a
-mesma busca em largura do core, para que o visitante troque a profundidade e veja o
-grafo reagir na hora.
-
-```bash
-npm run dev --workspace @livetest/landing              # servidor local
-npm run build:standalone --workspace @livetest/landing # HTML em arquivo único
-```
+| **Qualquer outra** | adapter próprio ([guia](https://livetest.vercel.app/pt/guide/adapters/)) | adapter `command` (exit code) |
 
 ## Documentação
 
-- [Configuração completa](docs/configuration.md) — todos os campos, com exemplos
-- [Escrevendo um adapter](docs/adapters.md) — suporte a uma nova linguagem
-- [Protocolo de eventos](docs/protocol.md) — formato do socket e do NDJSON
-- [Guia para agentes de IA](docs/ai-agents.md) — como consumir a saída
-- [`@livetest/core`](packages/core/README.md) — API programática
-- [`@livetest/cli`](packages/cli/README.md) — referência da CLI
-- [`@livetest/landing`](packages/landing/README.md) — a página de apresentação
+A documentação completa vive no site, em **português e inglês**, com busca em todo o
+conteúdo e uma demonstração interativa da propagação no grafo:
+
+| | Português | English |
+|---|---|---|
+| Primeiros passos | [/pt/guide/getting-started](https://livetest.vercel.app/pt/guide/getting-started/) | [/guide/getting-started](https://livetest.vercel.app/guide/getting-started/) |
+| Profundidade de propagação | [/pt/guide/depth](https://livetest.vercel.app/pt/guide/depth/) | [/guide/depth](https://livetest.vercel.app/guide/depth/) |
+| Agentes de IA | [/pt/guide/ai-agents](https://livetest.vercel.app/pt/guide/ai-agents/) | [/guide/ai-agents](https://livetest.vercel.app/guide/ai-agents/) |
+| Escrevendo um adapter | [/pt/guide/adapters](https://livetest.vercel.app/pt/guide/adapters/) | [/guide/adapters](https://livetest.vercel.app/guide/adapters/) |
+| Configuração | [/pt/reference/config](https://livetest.vercel.app/pt/reference/config/) | [/reference/config](https://livetest.vercel.app/reference/config/) |
+| CLI | [/pt/reference/cli](https://livetest.vercel.app/pt/reference/cli/) | [/reference/cli](https://livetest.vercel.app/reference/cli/) |
+| API do core | [/pt/reference/api](https://livetest.vercel.app/pt/reference/api/) | [/reference/api](https://livetest.vercel.app/reference/api/) |
+| Protocolo de eventos | [/pt/reference/protocol](https://livetest.vercel.app/pt/reference/protocol/) | [/reference/protocol](https://livetest.vercel.app/reference/protocol/) |
+
+O texto é escrito em [packages/landing/content/](packages/landing/content/), que é a fonte
+única: os arquivos em [docs/](docs/) apontam para as páginas correspondentes em vez de
+manter uma segunda cópia.
+
+## O site
+
+O site vive em [packages/landing/](packages/landing/). É estático, construído com Vite e
+**sem nenhuma dependência em runtime**: nenhuma página é um arquivo HTML no repositório, e
+as vinte e oito nascem no build a partir do Markdown e de uma tabela de rotas. A busca é um
+índice gerado no build e consultado no navegador, sem servidor.
+
+```bash
+npm run dev --workspace @livetest/landing              # servidor local
+npm run build --workspace @livetest/landing            # gera dist/
+npm run preview --workspace @livetest/landing          # serve o dist/
+npm run build:standalone --workspace @livetest/landing # a home em arquivo único
+```
 
 ## Desenvolvimento
 
