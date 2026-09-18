@@ -13,6 +13,7 @@
  * @packageDocumentation
  */
 
+import type { Marca } from './markdown.js';
 import type { Locale } from '../modules/i18n.js';
 
 /** Uma pagina de documentacao. */
@@ -97,6 +98,8 @@ export interface Textos {
   menu: string;
   /** Rotulo da navegacao principal, lido por leitor de tela. */
   navegacao: string;
+  /** Como chamar cada resposta das tabelas de comparacao. */
+  marcas: Readonly<Record<Marca, string>>;
   /** Aviso de que a pagina foi traduzida automaticamente pelo navegador. */
   editarPagina: string;
   /** Grupos do menu lateral. */
@@ -205,6 +208,7 @@ export const TEXTOS: Readonly<Record<Locale, Textos>> = {
     proxima: 'Next',
     menu: 'Menu',
     navegacao: 'Main navigation',
+    marcas: { yes: 'Yes', no: 'No', partial: 'Partial' },
     editarPagina: 'Edit this page on GitHub',
     menuLateral: MENU_EN,
     cabecalho: [
@@ -259,6 +263,7 @@ export const TEXTOS: Readonly<Record<Locale, Textos>> = {
     proxima: 'Próxima',
     menu: 'Menu',
     navegacao: 'Navegação principal',
+    marcas: { yes: 'Sim', no: 'Não', partial: 'Parcial' },
     editarPagina: 'Editar esta página no GitHub',
     menuLateral: MENU_PT,
     cabecalho: [

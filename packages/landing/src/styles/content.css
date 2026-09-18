@@ -241,6 +241,41 @@
   font-weight: 700;
 }
 
+/* ------------------------------------------------- marcas de comparacao */
+
+/*
+ * Um simbolo diz "sim", "nao" ou "parcial" mais rapido que a palavra, e uma
+ * tabela de vinte e quatro celulas fica legivel de relance em vez de exigir
+ * leitura. O nome vem no `title`, que aparece ao passar o mouse, e no
+ * `aria-label`, para quem nao ve o desenho.
+ *
+ * O xis fica em cinza, e nao em vermelho: a tabela compara ferramentas, e a
+ * ausencia de um recurso nao e um defeito.
+ */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+
+.marca svg {
+  width: 19px;
+  height: 19px;
+}
+
+.marca--yes {
+  color: var(--pass);
+}
+
+.marca--no {
+  color: var(--text-faint);
+}
+
+.marca--partial {
+  color: var(--warn);
+}
+
 /* ----------------------------------------------------------------- tabelas */
 
 .table-wrap {

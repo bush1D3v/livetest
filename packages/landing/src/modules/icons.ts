@@ -78,6 +78,23 @@ export const FECHAR = svg('<path d="M6 6l12 12M18 6 6 18" />', TRACO);
 /** Setinha que gira quando um grupo do menu abre ou fecha. */
 export const CHEVRON = svg('<path d="m9 6 6 6-6 6" />', TRACO);
 
+/** Visto, para "sim" nas tabelas de comparacao. */
+export const CHECK = svg('<path d="m5 13 4 4L19 7" />', TRACO);
+
+/** Xis, para "nao" nas tabelas de comparacao. */
+export const CRUZ = svg('<path d="M7 7l10 10M17 7 7 17" />', TRACO);
+
+/**
+ * Meia lua, para "parcial".
+ *
+ * Um circulo com metade preenchida diz "faz, mas so ate certo ponto" sem
+ * precisar de legenda, que e mais do que um tracinho ou um til conseguem.
+ */
+export const PARCIAL = svg(
+  '<circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor" stroke="none" />',
+  TRACO,
+);
+
 /** Pagina, mostrada ao lado de cada resultado de busca. */
 export const DOCUMENTO = svg(
   '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" />',

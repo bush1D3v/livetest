@@ -30,7 +30,7 @@ import {
   rotaCompleta,
 } from './src/build/layout.js';
 import { renderMarkdown, type Heading, type Secao } from './src/build/markdown.js';
-import { caminhoRelativo, PAGINAS_DOC } from './src/build/routes.js';
+import { caminhoRelativo, PAGINAS_DOC, TEXTOS } from './src/build/routes.js';
 import { montarIndice, serializarIndice } from './src/build/search-index.js';
 import { buildRobots, buildSitemap, dataDoSitemap } from './src/build/seo-assets.js';
 import { resolveSiteUrl } from './src/build/site-url.js';
@@ -110,6 +110,7 @@ function lerDocumentos(): Documento[] {
       const caminho = rotaCompleta(locale, pagina.rota);
       const convertido = renderMarkdown(corpo, {
         resolverLink: resolvedorDeLinks(caminho, locale),
+        marcas: TEXTOS[locale].marcas,
       });
 
       documentos.push({

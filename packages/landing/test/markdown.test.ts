@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { renderMarkdown, slugify, textoPuro } from '../src/build/markdown.js';
+import { MARCAS_PADRAO, renderMarkdown, slugify, textoPuro } from '../src/build/markdown.js';
 
 describe('slugify', () => {
   it('tira acentos e junta com hifen', () => {
@@ -28,6 +28,52 @@ describe('textoPuro', () => {
 
   it('colapsa espaco e barra de tabela', () => {
     expect(textoPuro('| a  |  b |')).toBe('a b');
+  });
+
+  it('descarta as marcas de comparacao, que sao desenho e nao palavra', () => {
+    expect(textoPuro('| recurso | :yes: | :no: | :partial: |')).toBe('recurso');
+  });
+});
+
+describe('marcas de comparacao', () => {
+  it('viram simbolo com nome no hover e no leitor de tela', () => {
+    const { html } = renderMarkdown(':yes:');
+    expect(html).toContain('class="marca marca--yes"');
+    expect(html).toContain('role="img"');
+    expect(html).toContain('aria-label="Yes"');
+    expect(html).toContain('title="Yes"');
+    expect(html).toContain('<svg');
+  });
+
+  it('tem um desenho diferente para cada resposta', () => {
+    const desenho = (marca: string): string =>
+      /<span[^>]*>([\s\S]*)<\/span>/.exec(renderMarkdown(`:${marca}:`).html)?.[1] ?? '';
+
+    const tres = ['yes', 'no', 'partial'].map(desenho);
+    expect(tres.every((svg) => svg.startsWith('<svg'))).toBe(true);
+    expect(new Set(tres).size).toBe(3);
+  });
+
+  it('usa os rotulos do idioma quando lhe passam', () => {
+    const { html } = renderMarkdown(':partial:', {
+      marcas: { yes: 'Sim', no: 'Não', partial: 'Parcial' },
+    });
+    expect(html).toContain('aria-label="Parcial"');
+    expect(html).toContain('title="Parcial"');
+  });
+
+  it('cai no ingles quando ninguem informa os rotulos', () => {
+    expect(MARCAS_PADRAO).toEqual({ yes: 'Yes', no: 'No', partial: 'Partial' });
+    expect(renderMarkdown(':no:').html).toContain('aria-label="No"');
+  });
+
+  it('dentro de uma celula, o simbolo e tudo que a celula tem', () => {
+    const { html } = renderMarkdown('| a | b |\n|---|:-:|\n| grafo | :yes: |');
+    expect(html).toContain('<td style="text-align:center"><span class="marca marca--yes"');
+  });
+
+  it('nao interpreta a marca dentro de um trecho de codigo', () => {
+    expect(renderMarkdown('`:yes:`').html).toBe('<p><code>:yes:</code></p>');
   });
 });
 

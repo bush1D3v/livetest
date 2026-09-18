@@ -8,13 +8,13 @@ description: Where livetest differs from vitest --watch, Wallaby.js and pytest-w
 Similar tools exist. None of them does quite this.
 
 | Capability | livetest | jest/vitest --watch | Wallaby.js | pytest-watch |
-|---|---|---|---|---|
-| Propagates through the dependency graph | yes | yes | yes | no |
-| Per-file configurable depth | yes | no | no | no |
-| Output designed for an AI agent | yes | no | no | no |
-| Explains why each test ran | yes | no | partial | no |
-| JS/TS and Python in the same daemon | yes | no | no | no |
-| Works with the editor closed | yes | yes | no | yes |
+|---|:-:|:-:|:-:|:-:|
+| Propagates through the dependency graph | :yes: | :yes: | :yes: | :no: |
+| Per-file configurable depth | :yes: | :no: | :no: | :no: |
+| Output designed for an AI agent | :yes: | :no: | :no: | :no: |
+| Explains why each test ran | :yes: | :no: | :partial: | :no: |
+| JS/TS and Python in the same daemon | :yes: | :no: | :no: | :no: |
+| Works with the editor closed | :yes: | :yes: | :no: | :yes: |
 
 ## What the others get right
 

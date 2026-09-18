@@ -365,6 +365,44 @@ describe('links internos do conteudo', () => {
   });
 });
 
+describe('tabela de comparacao', () => {
+  /** A pagina de comparativo, convertida como o build a converte. */
+  const comparativo = (locale: Locale): string =>
+    renderMarkdown(conteudo(locale, 'guide/comparison.md'), {
+      marcas: TEXTOS[locale].marcas,
+    }).html;
+
+  it('troca as vinte e quatro respostas por simbolos', () => {
+    for (const locale of LOCALES) {
+      const html = comparativo(locale);
+      expect(html.match(/class="marca marca--/g), locale).toHaveLength(24);
+      expect(html).toContain('marca--yes');
+      expect(html).toContain('marca--no');
+      expect(html).toContain('marca--partial');
+    }
+  });
+
+  it('nomeia cada simbolo no idioma da pagina', () => {
+    expect(comparativo('en')).toContain('title="Yes"');
+    expect(comparativo('en')).toContain('title="Partial"');
+    expect(comparativo('pt')).toContain('title="Sim"');
+    expect(comparativo('pt')).toContain('title="Parcial"');
+  });
+
+  it('centraliza as colunas de simbolo e deixa a capacidade a esquerda', () => {
+    const html = comparativo('en');
+    expect(html).toContain('<th>Capability</th>');
+    expect(html).toContain('<th style="text-align:center">livetest</th>');
+  });
+
+  it('nao indexa as respostas na busca', () => {
+    const { secoes } = renderMarkdown(conteudo('en', 'guide/comparison.md'));
+    const texto = secoes.map((secao) => secao.texto).join(' ');
+    expect(texto).toContain('Per-file configurable depth');
+    expect(texto).not.toMatch(/:yes:|:no:|:partial:/);
+  });
+});
+
 describe('texto visivel', () => {
   it('nao usa travessao, que denuncia texto de maquina', () => {
     for (const locale of LOCALES) {

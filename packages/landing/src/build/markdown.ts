@@ -19,6 +19,7 @@
  */
 
 import { escapeHtml, highlight, resolverLinguagem } from '../modules/highlight.js';
+import { CHECK, CRUZ, PARCIAL } from '../modules/icons.js';
 
 /** Um titulo da pagina, para o indice lateral. */
 export interface Heading {
@@ -50,6 +51,23 @@ export interface Renderizado {
   secoes: Secao[];
 }
 
+/** As tres respostas de uma tabela de comparacao. */
+export type Marca = 'yes' | 'no' | 'partial';
+
+/** Simbolo de cada resposta. */
+const SIMBOLO: Readonly<Record<Marca, string>> = {
+  yes: CHECK,
+  no: CRUZ,
+  partial: PARCIAL,
+};
+
+/** Rotulos usados quando quem chama nao informa os do idioma. */
+export const MARCAS_PADRAO: Readonly<Record<Marca, string>> = {
+  yes: 'Yes',
+  no: 'No',
+  partial: 'Partial',
+};
+
 /** Opcoes de {@link renderMarkdown}. */
 export interface RenderOptions {
   /**
@@ -62,6 +80,16 @@ export interface RenderOptions {
    * sabe disso.
    */
   resolverLink?: (href: string) => string;
+  /**
+   * Como chamar cada resposta de uma tabela de comparacao.
+   *
+   * O simbolo e igual nos dois idiomas; o nome dele, nao. Ele entra no `title`,
+   * que e o texto que aparece ao passar o mouse, e no `aria-label`, que e o que
+   * o leitor de tela anuncia no lugar do desenho.
+   *
+   * @defaultValue {@link MARCAS_PADRAO}
+   */
+  marcas?: Readonly<Record<Marca, string>>;
 }
 
 /** Caixas de destaque reconhecidas em `::: tipo`. */
@@ -98,6 +126,9 @@ export function slugify(texto: string): string {
  */
 export function textoPuro(markdown: string): string {
   return markdown
+    // As marcas de comparacao sao desenhos: indexa-las encheria a busca de
+    // "yes no yes no", que nao e o que ninguem procura.
+    .replace(/:(?:yes|no|partial):/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
@@ -107,10 +138,26 @@ export function textoPuro(markdown: string): string {
     .trim();
 }
 
+/**
+ * Uma resposta de tabela de comparacao, como simbolo.
+ *
+ * O nome fica no `title`, que o navegador mostra ao passar o mouse, e no
+ * `aria-label`, que substitui o desenho para quem usa leitor de tela. O
+ * `title` e nativo de proposito: a tabela rola dentro de uma caixa com
+ * `overflow`, e uma dica desenhada em CSS seria cortada na primeira linha.
+ */
+function marcaDeComparacao(marca: Marca, opcoes: RenderOptions): string {
+  const rotulo = (opcoes.marcas ?? MARCAS_PADRAO)[marca];
+  return (
+    `<span class="marca marca--${marca}" role="img" ` +
+    `aria-label="${escapeHtml(rotulo)}" title="${escapeHtml(rotulo)}">${SIMBOLO[marca]}</span>`
+  );
+}
+
 /** Converte a marcacao que vale dentro de uma linha. */
 function inline(texto: string, opcoes: RenderOptions): string {
   const padrao =
-    /`([^`]+)`|\*\*([^*]+?)\*\*|\[([^\]]+)\]\(([^)\s]+)\)|(?<![A-Za-z0-9])_([^_]+?)_(?![A-Za-z0-9])|\*([^*]+?)\*/g;
+    /`([^`]+)`|\*\*([^*]+?)\*\*|\[([^\]]+)\]\(([^)\s]+)\)|(?<![A-Za-z0-9])_([^_]+?)_(?![A-Za-z0-9])|\*([^*]+?)\*|:(yes|no|partial):/g;
 
   let saida = '';
   let cursor = 0;
@@ -120,11 +167,12 @@ function inline(texto: string, opcoes: RenderOptions): string {
     saida += escapeHtml(texto.slice(cursor, de));
     cursor = de + achado[0].length;
 
-    const [, codigo, forte, rotulo, href, sublinhado, enfase] = achado;
+    const [, codigo, forte, rotulo, href, sublinhado, enfase, marca] = achado;
 
     if (codigo !== undefined) saida += `<code>${escapeHtml(codigo)}</code>`;
     else if (forte !== undefined) saida += `<strong>${inline(forte, opcoes)}</strong>`;
     else if (rotulo !== undefined && href !== undefined) saida += link(rotulo, href, opcoes);
+    else if (marca !== undefined) saida += marcaDeComparacao(marca as Marca, opcoes);
     else saida += `<em>${inline((sublinhado ?? enfase) as string, opcoes)}</em>`;
   }
 
